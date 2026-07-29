@@ -404,7 +404,8 @@ export function useAgentGUIComposerSettingsActions(
       }
       if (
         nextModelParameters !== undefined &&
-        JSON.stringify(nextModelParameters) !== JSON.stringify(currentModelParameters)
+        JSON.stringify(nextModelParameters) !==
+          JSON.stringify(currentModelParameters)
       ) {
         sessionSettingsPatch.modelParameters = { ...nextModelParameters };
       }

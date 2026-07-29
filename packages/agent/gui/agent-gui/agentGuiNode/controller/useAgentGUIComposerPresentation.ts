@@ -206,21 +206,24 @@ export function useAgentGUIComposerPresentation(
     const presentedPermissionMode = normalizePermissionModeId(
       protectedSettings.permissionModeId
     );
-    const modelParameters = presentedModel && presentedModel !== "auto"
-      ? (input.providerComposerOptions?.modelParameterProfiles ?? [])
+    const modelParameters =
+      presentedModel && presentedModel !== "auto"
+        ? (input.providerComposerOptions?.modelParameterProfiles ?? [])
           .find((profile) => profile.modelId === presentedModel)?.parameters
+          .filter((parameter) => parameter.semantic === "context")
           .map((parameter) => ({
             id: parameter.id,
-            label: parameter.semantic === "context" ? "context" : parameter.semantic,
+            label: "context",
             currentValue:
               protectedSettings.modelParameters?.[parameter.id] ??
               parameter.currentValue ??
               parameter.defaultValue ??
               null,
-            configurable: parameter.configurable && parameter.options.length > 0,
+            configurable:
+              parameter.configurable && parameter.options.length > 0,
             options: parameter.options
           }))
-      : [];
+        : [];
     return {
       sessionSettings,
       draftSettings: {

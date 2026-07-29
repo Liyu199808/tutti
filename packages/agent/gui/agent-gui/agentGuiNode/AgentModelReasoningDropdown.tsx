@@ -346,21 +346,32 @@ export function AgentModelReasoningDropdown({
               data-agent-model-parameter-submenu-trigger={parameter.id}
             >
               <span className="min-w-0 flex-1 truncate">
-                {parameter.label === "context" ? labels.contextLabel : parameter.label}
+                {parameter.label === "context"
+                  ? labels.contextLabel
+                  : parameter.label}
               </span>
               <span className="text-[var(--text-tertiary)]">
                 {parameter.currentValue ?? labels.inheritedUnavailable}
               </span>
             </DropdownMenuSubTrigger>
             {parameter.configurable ? (
-              <DropdownMenuSubContent className={cn(styles.composerMenuContent, "min-w-[132px]")}>
+              <DropdownMenuSubContent
+                className={cn(styles.composerMenuContent, "min-w-[132px]")}
+              >
                 <ComposerMenuOptionItems
                   options={parameter.options}
                   selectedValue={parameter.currentValue ?? ""}
                   tooltipsEnabled
-                  onSelect={(value) => applySettingsChange({
-                    modelParameters: { ...(composerSettings.draftSettings.modelParameters ?? composerSettings.sessionSettings?.modelParameters ?? {}), [parameter.id]: value }
-                  })}
+                  onSelect={(value) =>
+                    applySettingsChange({
+                      modelParameters: {
+                        ...(composerSettings.draftSettings.modelParameters ??
+                          composerSettings.sessionSettings?.modelParameters ??
+                          {}),
+                        [parameter.id]: value
+                      }
+                    })
+                  }
                 />
               </DropdownMenuSubContent>
             ) : null}
