@@ -354,6 +354,8 @@ export function useAgentGUIComposerSettingsActions(
           ? normalizeOptionalText(supportedNextSettings.model)
           : undefined;
       const currentModel = normalizeOptionalText(sessionSettings?.model);
+      const nextModelParameters = supportedNextSettings.modelParameters;
+      const currentModelParameters = sessionSettings?.modelParameters;
       const nextReasoningEffort =
         supportedNextSettings.reasoningEffort !== undefined
           ? (supportedNextSettings.reasoningEffort ?? null)
@@ -399,6 +401,12 @@ export function useAgentGUIComposerSettingsActions(
 
       if (nextModel !== undefined && nextModel !== currentModel) {
         sessionSettingsPatch.model = nextModel;
+      }
+      if (
+        nextModelParameters !== undefined &&
+        JSON.stringify(nextModelParameters) !== JSON.stringify(currentModelParameters)
+      ) {
+        sessionSettingsPatch.modelParameters = { ...nextModelParameters };
       }
       if (
         nextReasoningEffort !== undefined &&

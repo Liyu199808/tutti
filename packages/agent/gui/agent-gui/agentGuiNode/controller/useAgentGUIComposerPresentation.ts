@@ -206,10 +206,26 @@ export function useAgentGUIComposerPresentation(
     const presentedPermissionMode = normalizePermissionModeId(
       protectedSettings.permissionModeId
     );
+    const modelParameters = presentedModel && presentedModel !== "auto"
+      ? (input.providerComposerOptions?.modelParameterProfiles ?? [])
+          .find((profile) => profile.modelId === presentedModel)?.parameters
+          .map((parameter) => ({
+            id: parameter.id,
+            label: parameter.semantic === "context" ? "context" : parameter.semantic,
+            currentValue:
+              protectedSettings.modelParameters?.[parameter.id] ??
+              parameter.currentValue ??
+              parameter.defaultValue ??
+              null,
+            configurable: parameter.configurable && parameter.options.length > 0,
+            options: parameter.options
+          }))
+      : [];
     return {
       sessionSettings,
       draftSettings: {
         model: presentedModel,
+        modelParameters: protectedSettings.modelParameters,
         reasoningEffort: presentedReasoningEffort,
         speed: presentedSpeed,
         planMode: Boolean(draftSettings.planMode),
@@ -289,6 +305,7 @@ export function useAgentGUIComposerPresentation(
       modelSwitchTakesEffectNextTurn:
         input.activeConversationId !== null &&
         input.composerSupport.modelSwitch,
+      modelParameters,
       availableModels:
         input.composerSupport.model &&
         hasOptionsSource &&

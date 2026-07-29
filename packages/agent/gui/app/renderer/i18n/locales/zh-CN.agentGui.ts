@@ -79,6 +79,7 @@ export const zhCNAgentGui = {
   loadingOptions: "正在加载",
   inheritedUnavailable: "继承 / 不可用",
   reasoningLabel: "推理强度",
+  contextLabel: "上下文",
   reasoningDegreeLabel: "推理程度",
   reasoningOptionDefault: "默认",
   reasoningOptionMinimal: "最低",
