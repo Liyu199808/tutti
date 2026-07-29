@@ -87,6 +87,7 @@ func (api DaemonAPI) CreateWorkspaceAgentSession(ctx context.Context, request tu
 		InitialDisplayPrompt:       stringPtrValue(request.Body.InitialDisplayPrompt),
 		Metadata:                   metadata,
 		Model:                      request.Body.Model,
+		ModelParameters:            generatedModelParameterValues(request.Body.ModelParameters),
 		PermissionModeID:           request.Body.PermissionModeId,
 		PlanMode:                   request.Body.PlanMode,
 		BrowserUse:                 request.Body.BrowserUse,

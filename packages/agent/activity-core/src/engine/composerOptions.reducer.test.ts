@@ -15,6 +15,7 @@ function options(
     capabilities: null,
     models: [],
     reasoningEfforts: [],
+    modelParameterProfiles: [],
     speeds: [],
     skills: [],
     behavior: {} as AgentActivityComposerOptions["behavior"],

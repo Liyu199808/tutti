@@ -84,6 +84,73 @@ func (s *Service) ValidateAgentComposerDefaultsPatch(
 	return nil
 }
 
+func (s *Service) ValidateAgentModelParametersPatch(
+	ctx context.Context,
+	agentTargetID string,
+	baseModelID string,
+	patch preferencesbiz.AgentModelParametersPatch,
+) error {
+	hasSelection := false
+	for _, value := range patch {
+		if value != nil {
+			hasSelection = true
+			break
+		}
+	}
+	if !hasSelection {
+		return nil
+	}
+	launchInput := CreateSessionInput{AgentTargetID: strings.TrimSpace(agentTargetID)}
+	launch, err := s.resolveCreateSessionLaunch(ctx, "", &launchInput)
+	if err != nil {
+		return err
+	}
+	options, err := s.GetComposerOptions(ctx, ComposerOptionsInput{
+		AgentTargetID: strings.TrimSpace(agentTargetID), Provider: launch.Provider,
+		IncludeCapabilityCatalog: boolPointer(false),
+	})
+	if err != nil {
+		return err
+	}
+	baseModelID = strings.TrimSpace(baseModelID)
+	var profile *ComposerModelParameterProfile
+	for index := range options.ModelParameterProfiles {
+		if strings.TrimSpace(options.ModelParameterProfiles[index].BaseModelID) == baseModelID {
+			profile = &options.ModelParameterProfiles[index]
+			break
+		}
+	}
+	if profile == nil {
+		return fmt.Errorf("%w: base model parameter capabilities are unavailable", ErrInvalidArgument)
+	}
+	for parameterID, selected := range patch {
+		if selected == nil {
+			continue
+		}
+		var capability *ComposerModelParameterCapability
+		for index := range profile.Parameters {
+			if strings.TrimSpace(profile.Parameters[index].ID) == strings.TrimSpace(parameterID) {
+				capability = &profile.Parameters[index]
+				break
+			}
+		}
+		if capability == nil || !capability.Configurable || strings.TrimSpace(capability.Availability) != "supported" {
+			return fmt.Errorf("%w: model parameter %s is not configurable", ErrInvalidArgument, parameterID)
+		}
+		matched := false
+		for _, option := range capability.Options {
+			if strings.TrimSpace(option.Value) == strings.TrimSpace(*selected) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return fmt.Errorf("%w: model parameter %s value is not supported", ErrInvalidArgument, parameterID)
+		}
+	}
+	return nil
+}
+
 func validateComposerDefaultOption(
 	field string,
 	selected string,

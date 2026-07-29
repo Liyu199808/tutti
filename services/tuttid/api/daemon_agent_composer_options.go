@@ -128,6 +128,51 @@ func generatedAgentProviderComposerReasoningOptionsByModel(
 	return result
 }
 
+func generatedAgentProviderModelParameterProfiles(
+	profiles []agentservice.ComposerModelParameterProfile,
+) []tuttigenerated.AgentProviderModelParameterProfile {
+	result := make([]tuttigenerated.AgentProviderModelParameterProfile, 0, len(profiles))
+	for _, profile := range profiles {
+		modelID := strings.TrimSpace(profile.ModelID)
+		baseModelID := strings.TrimSpace(profile.BaseModelID)
+		if modelID == "" || baseModelID == "" {
+			continue
+		}
+		parameters := make([]tuttigenerated.AgentProviderModelParameterCapability, 0, len(profile.Parameters))
+		for _, parameter := range profile.Parameters {
+			id := strings.TrimSpace(parameter.ID)
+			semantic := strings.TrimSpace(parameter.Semantic)
+			source := strings.TrimSpace(parameter.Source)
+			preferenceScope := strings.TrimSpace(parameter.PreferenceScope)
+			availability := strings.TrimSpace(parameter.Availability)
+			if id == "" || semantic == "" || source == "" || preferenceScope == "" || availability == "" {
+				continue
+			}
+			generated := tuttigenerated.AgentProviderModelParameterCapability{
+				Id: id, Semantic: semantic, Source: source,
+				PreferenceScope: preferenceScope, Availability: availability,
+				Configurable: parameter.Configurable,
+				Options: generatedComposerConfigOption(agentservice.ComposerConfigOption{
+					Options: parameter.Options,
+				}).Options,
+			}
+			if strings.TrimSpace(parameter.CurrentValue) != "" {
+				current := parameter.CurrentValue
+				generated.CurrentValue = &current
+			}
+			if strings.TrimSpace(parameter.DefaultValue) != "" {
+				defaultValue := parameter.DefaultValue
+				generated.DefaultValue = &defaultValue
+			}
+			parameters = append(parameters, generated)
+		}
+		result = append(result, tuttigenerated.AgentProviderModelParameterProfile{
+			ModelId: modelID, BaseModelId: baseModelID, Parameters: parameters,
+		})
+	}
+	return result
+}
+
 // generatedComposerConfigOptionPointer projects an optional composer config
 // (the orthogonal speed dimension) and omits it entirely for providers that do
 // not expose it, so the GUI hides the control.

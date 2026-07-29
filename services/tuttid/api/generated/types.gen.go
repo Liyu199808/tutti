@@ -3874,9 +3874,12 @@ type AgentProviderComposerOptionsResponse struct {
 	CapabilityCatalog []AgentProviderCapabilityOption `json:"capabilityCatalog"`
 
 	// Commands Commands advertised by the resolved runtime session.
-	Commands                []AgentProviderComposerCommandOption         `json:"commands"`
-	EffectiveSettings       AgentSessionComposerSettings                 `json:"effectiveSettings"`
-	ModelConfig             AgentProviderComposerConfig                  `json:"modelConfig"`
+	Commands          []AgentProviderComposerCommandOption `json:"commands"`
+	EffectiveSettings AgentSessionComposerSettings         `json:"effectiveSettings"`
+	ModelConfig       AgentProviderComposerConfig          `json:"modelConfig"`
+
+	// ModelParameterProfiles Resolved per-model parameter capabilities. The daemon applies source precedence (ACP before explicit compatibility presets) and the shared GUI consumes this provider-neutral projection without branching on provider identity.
+	ModelParameterProfiles  *[]AgentProviderModelParameterProfile        `json:"modelParameterProfiles,omitempty"`
 	PermissionConfig        PermissionConfig                             `json:"permissionConfig"`
 	Provider                WorkspaceAgentProvider                       `json:"provider"`
 	ReasoningConfig         AgentProviderComposerConfig                  `json:"reasoningConfig"`
@@ -3896,6 +3899,36 @@ type AgentProviderComposerReasoningOptionsByModel map[string]AgentProviderCompos
 type AgentProviderComposerReasoningProfile struct {
 	DefaultValue *string                                  `json:"defaultValue,omitempty"`
 	Options      []AgentProviderComposerConfigOptionValue `json:"options"`
+}
+
+// AgentProviderModelParameterCapability defines model for AgentProviderModelParameterCapability.
+type AgentProviderModelParameterCapability struct {
+	// Availability supported, unsupported, or unknown; unknown values remain forward compatible.
+	Availability string `json:"availability"`
+	Configurable bool   `json:"configurable"`
+
+	// CurrentValue Verified current value; it may be absent from options and must still be preserved.
+	CurrentValue *string                                  `json:"currentValue,omitempty"`
+	DefaultValue *string                                  `json:"defaultValue,omitempty"`
+	Id           string                                   `json:"id"`
+	Options      []AgentProviderComposerConfigOptionValue `json:"options"`
+
+	// PreferenceScope baseModel for Context/reasoning memory or agentTarget for target-global Fast memory.
+	PreferenceScope string `json:"preferenceScope"`
+
+	// Semantic Provider-neutral semantic such as context, reasoning, speed, or an unknown pass-through id.
+	Semantic string `json:"semantic"`
+
+	// Source Auditable source such as acp, exact-model-preset, model-family-preset, or parameterized-model.
+	Source string `json:"source"`
+}
+
+// AgentProviderModelParameterProfile defines model for AgentProviderModelParameterProfile.
+type AgentProviderModelParameterProfile struct {
+	// BaseModelId Durable memory key shared by parameterized variants of one base model.
+	BaseModelId string                                  `json:"baseModelId"`
+	ModelId     string                                  `json:"modelId"`
+	Parameters  []AgentProviderModelParameterCapability `json:"parameters"`
 }
 
 // AgentProviderNetworkEndpoint defines model for AgentProviderNetworkEndpoint.
@@ -4066,12 +4099,28 @@ type AgentSessionCassetteListResponse struct {
 
 // AgentSessionComposerSettings defines model for AgentSessionComposerSettings.
 type AgentSessionComposerSettings struct {
-	BrowserUse       *bool   `json:"browserUse,omitempty"`
-	Model            *string `json:"model,omitempty"`
-	PermissionModeId *string `json:"permissionModeId,omitempty"`
-	PlanMode         *bool   `json:"planMode,omitempty"`
-	ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-	Speed            *string `json:"speed,omitempty"`
+	BrowserUse *bool   `json:"browserUse,omitempty"`
+	Model      *string `json:"model,omitempty"`
+
+	// ModelParameters Opaque provider-confirmed model parameter values keyed by the stable parameter ids advertised by modelParameterProfiles. Unknown keys and values are preserved; their presence does not imply a selectable range.
+	ModelParameters  *map[string]string `json:"modelParameters,omitempty"`
+	PermissionModeId *string            `json:"permissionModeId,omitempty"`
+	PlanMode         *bool              `json:"planMode,omitempty"`
+	ReasoningEffort  *string            `json:"reasoningEffort,omitempty"`
+	Speed            *string            `json:"speed,omitempty"`
+}
+
+// AgentSessionComposerSettingsPatch defines model for AgentSessionComposerSettingsPatch.
+type AgentSessionComposerSettingsPatch struct {
+	BrowserUse *bool   `json:"browserUse,omitempty"`
+	Model      *string `json:"model,omitempty"`
+
+	// ModelParameters Sparse model-parameter mutation. Null removes one key; absent keys remain unchanged. A live Session persists these values only after the runtime accepts the complete patch.
+	ModelParameters  *map[string]*string `json:"modelParameters,omitempty"`
+	PermissionModeId *string             `json:"permissionModeId,omitempty"`
+	PlanMode         *bool               `json:"planMode,omitempty"`
+	ReasoningEffort  *string             `json:"reasoningEffort,omitempty"`
+	Speed            *string             `json:"speed,omitempty"`
 }
 
 // AgentSessionModelPolicyOverride defines model for AgentSessionModelPolicyOverride.
@@ -4893,6 +4942,9 @@ type CreateWorkspaceAgentSessionRequest struct {
 	InitialTuttiModeActivation *TuttiModeActivationIntent `json:"initialTuttiModeActivation,omitempty"`
 	Model                      *string                    `json:"model,omitempty"`
 
+	// ModelParameters Explicit model-scoped parameter values selected before Session creation.
+	ModelParameters *map[string]string `json:"modelParameters,omitempty"`
+
 	// NoProject Classifies a session that is intentionally not attached to a workspace project.
 	NoProject        *bool                        `json:"noProject,omitempty"`
 	PermissionModeId *string                      `json:"permissionModeId,omitempty"`
@@ -5064,10 +5116,13 @@ type DeletedAgentConversationRetentionDays int
 
 // DesktopAgentComposerDefaults defines model for DesktopAgentComposerDefaults.
 type DesktopAgentComposerDefaults struct {
-	Model            *string `json:"model,omitempty"`
-	PermissionModeId *string `json:"permissionModeId,omitempty"`
-	ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-	Speed            *string `json:"speed,omitempty"`
+	Model *string `json:"model,omitempty"`
+
+	// ModelParametersByBaseModel Per-base-model Context, reasoning, and future model-parameter memories. Fast remains the target-global speed field on the exact Agent Target defaults record.
+	ModelParametersByBaseModel *map[string]map[string]string `json:"modelParametersByBaseModel,omitempty"`
+	PermissionModeId           *string                       `json:"permissionModeId,omitempty"`
+	ReasoningEffort            *string                       `json:"reasoningEffort,omitempty"`
+	Speed                      *string                       `json:"speed,omitempty"`
 }
 
 // DesktopAgentComposerDefaultsByAgentTarget defines model for DesktopAgentComposerDefaultsByAgentTarget.
@@ -8456,7 +8511,7 @@ type SetAgentSessionModelPolicyOverrideJSONRequestBody = SetAgentSessionModelPol
 type UpdateWorkspaceAgentSessionPinJSONRequestBody = UpdateWorkspaceAgentSessionPinRequest
 
 // UpdateWorkspaceAgentSessionSettingsJSONRequestBody defines body for UpdateWorkspaceAgentSessionSettings for application/json ContentType.
-type UpdateWorkspaceAgentSessionSettingsJSONRequestBody = AgentSessionComposerSettings
+type UpdateWorkspaceAgentSessionSettingsJSONRequestBody = AgentSessionComposerSettingsPatch
 
 // UpdateWorkspaceAgentSessionTitleJSONRequestBody defines body for UpdateWorkspaceAgentSessionTitle for application/json ContentType.
 type UpdateWorkspaceAgentSessionTitleJSONRequestBody = UpdateWorkspaceAgentSessionTitleRequest

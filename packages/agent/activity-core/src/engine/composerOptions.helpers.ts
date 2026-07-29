@@ -25,12 +25,30 @@ export function cloneAgentActivityComposerOptions(
           )
         )
       : undefined,
+    modelParameterProfiles: (options.modelParameterProfiles ?? []).map(
+      (profile) => ({
+        ...profile,
+        parameters: profile.parameters.map((parameter) => ({
+          ...parameter,
+          options: parameter.options.map((option) => ({ ...option }))
+        }))
+      })
+    ),
     speeds: (options.speeds ?? []).map((option) => ({ ...option })),
     modelConfigurable: options.modelConfigurable ?? false,
     reasoningConfigurable: options.reasoningConfigurable ?? false,
     speedConfigurable: options.speedConfigurable ?? false,
     effectiveSettings: options.effectiveSettings
-      ? { ...options.effectiveSettings }
+      ? {
+          ...options.effectiveSettings,
+          ...(options.effectiveSettings.modelParameters
+            ? {
+                modelParameters: {
+                  ...options.effectiveSettings.modelParameters
+                }
+              }
+            : {})
+        }
       : (options.effectiveSettings ?? null),
     permissionConfig: cloneJSONValue(
       options.permissionConfig ?? null
@@ -72,11 +90,19 @@ export function composerOptionsRequestSignature(input: {
   const settings = input.settings;
   const normalizedText = (value: string | null | undefined): string | null =>
     value?.trim() || null;
+  const modelParameters = Object.fromEntries(
+    Object.entries(settings?.modelParameters ?? {})
+      .filter(
+        ([key, value]) => key.trim().length > 0 && value.trim().length > 0
+      )
+      .sort(([left], [right]) => left.localeCompare(right))
+  );
   return JSON.stringify({
     provider: input.provider?.trim() ?? "",
     cwd: input.cwd?.trim() ?? "",
     settings: {
       model: normalizedText(settings?.model),
+      modelParameters,
       reasoningEffort: normalizedText(settings?.reasoningEffort),
       speed: normalizedText(settings?.speed),
       planMode:

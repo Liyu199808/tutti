@@ -17,6 +17,7 @@ export type AgentComposerSettingsMenuLabels = {
   loadingOptions: string;
   inheritedUnavailable: string;
   reasoningLabel: string;
+  contextLabel: string;
   reasoningDegreeLabel: string;
   reasoningOptionDefault: string;
   reasoningOptionMinimal: string;

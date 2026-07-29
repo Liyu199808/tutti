@@ -1,6 +1,8 @@
 package preferences
 
 import (
+	"strings"
+
 	tuttigenerated "github.com/tutti-os/tutti/services/tuttid/api/generated"
 	preferencesbiz "github.com/tutti-os/tutti/services/tuttid/biz/preferences"
 )
@@ -104,15 +106,40 @@ func generatedAgentComposerDefaultsByAgentTarget(value map[string]preferencesbiz
 
 func generatedAgentComposerDefaultsPointer(value preferencesbiz.AgentComposerDefaults) *tuttigenerated.DesktopAgentComposerDefaults {
 	generated := tuttigenerated.DesktopAgentComposerDefaults{
-		Model:            optionalStringPointer(value.Model),
-		PermissionModeId: optionalStringPointer(value.PermissionModeID),
-		ReasoningEffort:  optionalStringPointer(value.ReasoningEffort),
-		Speed:            optionalStringPointer(value.Speed),
+		Model:                      optionalStringPointer(value.Model),
+		ModelParametersByBaseModel: generatedModelParametersByBaseModel(value.ModelParametersByBaseModel),
+		PermissionModeId:           optionalStringPointer(value.PermissionModeID),
+		ReasoningEffort:            optionalStringPointer(value.ReasoningEffort),
+		Speed:                      optionalStringPointer(value.Speed),
 	}
-	if generated.Model == nil && generated.PermissionModeId == nil && generated.ReasoningEffort == nil && generated.Speed == nil {
+	if generated.Model == nil && generated.ModelParametersByBaseModel == nil && generated.PermissionModeId == nil && generated.ReasoningEffort == nil && generated.Speed == nil {
 		return nil
 	}
 	return &generated
+}
+
+func generatedModelParametersByBaseModel(
+	value map[string]map[string]string,
+) *map[string]map[string]string {
+	result := map[string]map[string]string{}
+	for baseModelID, parameters := range value {
+		if baseModelID == "" || len(parameters) == 0 {
+			continue
+		}
+		values := map[string]string{}
+		for parameterID, selected := range parameters {
+			if strings.TrimSpace(parameterID) != "" && strings.TrimSpace(selected) != "" {
+				values[parameterID] = selected
+			}
+		}
+		if len(values) > 0 {
+			result[baseModelID] = values
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return &result
 }
 
 func optionalStringPointer(value string) *string {

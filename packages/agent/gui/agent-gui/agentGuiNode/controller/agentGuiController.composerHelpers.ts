@@ -366,6 +366,9 @@ export function resolveEffectiveComposerSettings(input: {
 }): AgentSessionComposerSettings {
   return {
     model: normalizeOptionalText(input.settings.model) ?? null,
+    ...(input.settings.modelParameters
+      ? { modelParameters: { ...input.settings.modelParameters } }
+      : {}),
     reasoningEffort:
       (normalizeOptionalText(
         input.settings.reasoningEffort
@@ -394,7 +397,12 @@ export function cloneComposerSettings(
   if (!settings) {
     return null;
   }
-  return { ...settings };
+  return {
+    ...settings,
+    ...(settings.modelParameters
+      ? { modelParameters: { ...settings.modelParameters } }
+      : {})
+  };
 }
 
 export function sameComposerSettings(
@@ -403,12 +411,27 @@ export function sameComposerSettings(
 ): boolean {
   return (
     (left?.model ?? null) === (right?.model ?? null) &&
+    stringRecordsEqual(left?.modelParameters, right?.modelParameters) &&
     (left?.reasoningEffort ?? null) === (right?.reasoningEffort ?? null) &&
     (left?.speed ?? null) === (right?.speed ?? null) &&
     Boolean(left?.planMode) === Boolean(right?.planMode) &&
     (left?.browserUse ?? true) === (right?.browserUse ?? true) &&
     (left?.computerUse ?? true) === (right?.computerUse ?? true) &&
     (left?.permissionModeId ?? null) === (right?.permissionModeId ?? null)
+  );
+}
+
+function stringRecordsEqual(
+  left: Record<string, string> | null | undefined,
+  right: Record<string, string> | null | undefined
+): boolean {
+  const leftKeys = Object.keys(left ?? {}).sort();
+  const rightKeys = Object.keys(right ?? {}).sort();
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key, index) => key === rightKeys[index] && left?.[key] === right?.[key]
+    )
   );
 }
 
@@ -424,6 +447,9 @@ export function buildNodeDefaultComposerSettings(
   const composerOverrides = nodeComposerOverridesForProvider(data) ?? {};
   return {
     model: normalizeOptionalText(composerOverrides.model),
+    ...(composerOverrides.modelParameters
+      ? { modelParameters: { ...composerOverrides.modelParameters } }
+      : {}),
     reasoningEffort:
       (normalizeOptionalText(
         composerOverrides.reasoningEffort
@@ -480,6 +506,9 @@ export function nodeDataFromComposerSettings(
   // Generic cleanup only — provider-level clamping is owned by the daemon.
   const composerOverrides = {
     model: normalizeOptionalText(settings.model),
+    ...(settings.modelParameters
+      ? { modelParameters: { ...settings.modelParameters } }
+      : {}),
     reasoningEffort: normalizeOptionalText(settings.reasoningEffort),
     speed: normalizeOptionalText(settings.speed),
     planMode: Boolean(settings.planMode),

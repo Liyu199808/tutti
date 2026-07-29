@@ -85,6 +85,7 @@ export const enAgentGui = {
   loadingOptions: "Loading…",
   inheritedUnavailable: "Inherited / unavailable",
   reasoningLabel: "Reasoning",
+  contextLabel: "Context",
   reasoningDegreeLabel: "Reasoning level",
   reasoningOptionDefault: "Default",
   reasoningOptionMinimal: "Minimal",

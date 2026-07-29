@@ -1670,6 +1670,24 @@ export const preferencesAgentComposerDefaultsPatchRequestedPayloadSchema = {
         },
         speed: {
           type: ["string", "null"]
+        },
+        modelParameters: {
+          type: "object",
+          additionalProperties: false,
+          required: ["baseModelId", "values"],
+          properties: {
+            baseModelId: {
+              type: "string",
+              minLength: 1
+            },
+            values: {
+              type: "object",
+              minProperties: 1,
+              additionalProperties: {
+                type: ["string", "null"]
+              }
+            }
+          }
         }
       }
     },

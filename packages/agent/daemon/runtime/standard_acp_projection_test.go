@@ -176,6 +176,31 @@ func TestCanonicalACPReasoningAliasPrecedenceIsDeterministicAndPreservesUnknownO
 	}
 }
 
+func TestSessionSettingsWithACPConfigPreservesUnknownCurrentModelParameters(t *testing.T) {
+	settings := sessionSettingsWithACPConfig(
+		&SessionSettings{Model: "composer-2.5", ModelParameters: map[string]string{"retained": "old"}},
+		"cursor",
+		"",
+		map[string]any{
+			"model":            "composer-2.5[context=1m]",
+			"reasoning_effort": "high",
+			"fast":             "off",
+			"context":          "1m",
+			"future_parameter": " opaque-current ",
+		},
+		true,
+	)
+	if settings == nil || settings.Model != "composer-2.5[context=1m]" ||
+		settings.ReasoningEffort != "high" || settings.Speed != "off" {
+		t.Fatalf("settings = %#v", settings)
+	}
+	if settings.ModelParameters["context"] != "1m" ||
+		settings.ModelParameters["future_parameter"] != " opaque-current " ||
+		settings.ModelParameters["retained"] != "old" {
+		t.Fatalf("model parameters = %#v", settings.ModelParameters)
+	}
+}
+
 func TestOpenStandardACPSettingsValidationRejectsUnadvertisedValuesBeforeWrites(t *testing.T) {
 	transport := newStandardACPTransport("Example Agent", "example-session-1")
 	transport.conn.configOptions = []map[string]any{

@@ -112,6 +112,7 @@ type PreferencesStore interface {
 
 type AgentComposerDefaultsPatchStore interface {
 	PatchAgentComposerDefaultsForTarget(context.Context, string, preferencesbiz.AgentComposerDefaultsPatch) (preferencesbiz.AgentComposerDefaults, error)
+	PatchAgentModelParametersForTarget(context.Context, string, string, preferencesbiz.AgentModelParametersPatch) (preferencesbiz.AgentComposerDefaults, error)
 }
 
 type ModelPlansStore interface {

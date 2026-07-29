@@ -70,10 +70,32 @@ export interface AgentActivityComposerPermissionConfig {
 
 export interface AgentActivityComposerSettings {
   model?: string | null;
+  /** Opaque provider-confirmed values keyed by stable model parameter id. */
+  modelParameters?: Record<string, string>;
   reasoningEffort?: string | null;
   speed?: string | null;
   planMode?: boolean | null;
   permissionModeId?: string | null;
+}
+
+export interface AgentActivityComposerModelParameterCapability {
+  id: string;
+  semantic: string;
+  source: string;
+  preferenceScope: string;
+  availability: string;
+  configurable: boolean;
+  /** A verified current value is retained even when it is not selectable. */
+  currentValue?: string | null;
+  defaultValue?: string | null;
+  options: AgentActivityComposerSettingOption[];
+}
+
+export interface AgentActivityComposerModelParameterProfile {
+  modelId: string;
+  /** Durable key shared by parameterized variants of one base model. */
+  baseModelId: string;
+  parameters: AgentActivityComposerModelParameterCapability[];
 }
 
 export type AgentActivitySlashCommandEffect =
@@ -114,6 +136,8 @@ export interface AgentActivityComposerOptions {
       options: AgentActivityComposerSettingOption[];
     }
   >;
+  /** Optional at the shared boundary for rolling upgrades; adapters normalize absence to an empty list. */
+  modelParameterProfiles?: AgentActivityComposerModelParameterProfile[];
   /** Orthogonal speed tiers (e.g. standard/fast); empty when unsupported. */
   speeds: AgentActivityComposerSettingOption[];
   /** Mirrors tuttid modelConfig.configurable; false when absent. */

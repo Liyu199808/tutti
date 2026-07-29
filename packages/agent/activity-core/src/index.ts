@@ -317,6 +317,8 @@ export type {
   AgentActivityGoalControlResult,
   AgentActivityComposerCapabilityOption,
   AgentActivityComposerBehavior,
+  AgentActivityComposerModelParameterCapability,
+  AgentActivityComposerModelParameterProfile,
   AgentActivityComposerOptions,
   AgentActivityComposerPermissionConfig,
   AgentActivityComposerPermissionModeOption,

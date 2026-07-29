@@ -105,7 +105,7 @@ func (h *Host) CreateSession(ctx context.Context, workspaceID string, input Crea
 			WorkspaceID: workspaceID, AgentSessionID: input.AgentSessionID, AgentTargetID: input.AgentTargetID,
 			Provider: input.Provider, Cwd: prepared.Cwd, Env: append([]string(nil), prepared.Env...),
 			Title: value(input.Title), InitialTitleEstablished: NormalizeTitle(value(input.Title)) != "",
-			PermissionModeID: value(input.PermissionModeID), Model: value(input.Model), PlanMode: valueBool(input.PlanMode),
+			PermissionModeID: value(input.PermissionModeID), Model: value(input.Model), ModelParameters: cloneModelParameterValues(input.ModelParameters), PlanMode: valueBool(input.PlanMode),
 			BrowserUse: input.BrowserUse, ComputerUse: input.ComputerUse,
 			ProviderTargetRef: cloneMap(firstMap(prepared.ProviderTargetRef, input.ProviderTargetRef)),
 			RuntimeContext:    cloneMap(input.RuntimeContext), ReasoningEffort: value(input.ReasoningEffort),
@@ -614,6 +614,7 @@ func resumePreparationInput(session storesqlite.Session, settings ComposerSettin
 func composerSettingsFromMap(values map[string]any) ComposerSettings {
 	result := ComposerSettings{}
 	result.Model, _ = values["model"].(string)
+	result.ModelParameters = modelParameterValuesFromAny(values["modelParameters"])
 	result.PermissionModeID, _ = values["permissionModeId"].(string)
 	result.PlanMode, _ = values["planMode"].(bool)
 	if value, ok := values["browserUse"].(bool); ok {
@@ -626,6 +627,23 @@ func composerSettingsFromMap(values map[string]any) ComposerSettings {
 	result.Speed, _ = values["speed"].(string)
 	result.ConversationDetailMode, _ = values["conversationDetailMode"].(string)
 	return result
+}
+
+func modelParameterValuesFromAny(value any) map[string]string {
+	result := map[string]string{}
+	switch values := value.(type) {
+	case map[string]string:
+		for key, current := range values {
+			result[key] = current
+		}
+	case map[string]any:
+		for key, raw := range values {
+			if current, ok := raw.(string); ok {
+				result[key] = current
+			}
+		}
+	}
+	return cloneModelParameterValues(result)
 }
 
 func lifecycleFromTurn(turn storesqlite.Turn) TurnLifecycle {

@@ -122,6 +122,7 @@ describe("composer target presentation", () => {
       loadedAtUnixMs: 1,
       effectiveSettings: {
         model: "gpt-5.3-codex",
+        modelParameters: { context: "1m", future: "opaque" },
         reasoningEffort: "high",
         permissionModeId: "full-access"
       }
@@ -136,6 +137,7 @@ describe("composer target presentation", () => {
       })
     ).toMatchObject({
       model: "gpt-5.3-codex",
+      modelParameters: { context: "1m", future: "opaque" },
       reasoningEffort: "high",
       planMode: false,
       browserUse: true,

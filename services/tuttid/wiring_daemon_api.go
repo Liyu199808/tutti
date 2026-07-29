@@ -330,6 +330,7 @@ func buildDaemonAPI(
 	)
 	agentSessionService.AgentComposerDefaultsReader = preferences
 	preferences.AgentComposerDefaultsValidator = agentSessionService
+	preferences.AgentModelParametersValidator = agentSessionService
 	agentSessionService.ExtensionComposerProfiles = agentExtensionComposerProfileResolver{
 		manager: agentExtensionManager,
 	}

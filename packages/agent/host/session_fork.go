@@ -636,6 +636,11 @@ func preparedSessionForkSettings(
 		return result
 	}
 	result["model"] = prepared.Model
+	if parameters := cloneModelParameterValues(prepared.ModelParameters); len(parameters) > 0 {
+		result["modelParameters"] = parameters
+	} else {
+		delete(result, "modelParameters")
+	}
 	result["modelPlanId"] = prepared.ModelPlanID
 	result["permissionModeId"] = prepared.PermissionModeID
 	result["planMode"] = prepared.PlanMode

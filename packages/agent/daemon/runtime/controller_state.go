@@ -22,6 +22,20 @@ func (c *Controller) UpdateSettings(ctx context.Context, input UpdateSettingsInp
 	if input.Settings.Model != nil {
 		settings.Model = strings.TrimSpace(*input.Settings.Model)
 	}
+	settings.ModelParameters = cloneModelParameterValues(settings.ModelParameters)
+	for key, value := range input.Settings.ModelParameters {
+		if strings.TrimSpace(key) == "" {
+			continue
+		}
+		if value == nil || strings.TrimSpace(*value) == "" {
+			delete(settings.ModelParameters, key)
+			continue
+		}
+		if settings.ModelParameters == nil {
+			settings.ModelParameters = map[string]string{}
+		}
+		settings.ModelParameters[key] = *value
+	}
 	if input.Settings.ReasoningEffort != nil {
 		settings.ReasoningEffort = strings.TrimSpace(*input.Settings.ReasoningEffort)
 	}
@@ -53,6 +67,11 @@ func (c *Controller) UpdateSettings(ctx context.Context, input UpdateSettingsInp
 	nextSession.Settings = cloneSessionSettings(settings)
 	if newSessionAdapter, ok := adapter.(NewSessionSettingsAdapter); ok && newSessionAdapter.RequiresNewSessionForSettings(session, input.Settings) {
 		return UpdateSettingsResult{}, ErrSessionSettingsRequireNewSession
+	}
+	if len(input.Settings.ModelParameters) > 0 {
+		if _, ok := adapter.(ModelParameterSettingsAdapter); !ok {
+			return UpdateSettingsResult{}, ErrModelParameterSettingsUnsupported
+		}
 	}
 	if permissionChanged {
 		if permissionAdapter, ok := adapter.(PermissionModeAdapter); ok {
@@ -114,6 +133,9 @@ func (c *Controller) State(roomID, agentSessionID string) (SessionStateSnapshot,
 	}
 	if snapshot.Settings != nil {
 		snapshot.RuntimeContext["model"] = snapshot.Settings.Model
+		if len(snapshot.Settings.ModelParameters) > 0 {
+			snapshot.RuntimeContext["modelParameters"] = cloneModelParameterValues(snapshot.Settings.ModelParameters)
+		}
 		snapshot.RuntimeContext["reasoningEffort"] = snapshot.Settings.ReasoningEffort
 		snapshot.RuntimeContext["speed"] = snapshot.Settings.Speed
 		snapshot.RuntimeContext["planMode"] = snapshot.Settings.PlanMode

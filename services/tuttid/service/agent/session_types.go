@@ -637,6 +637,7 @@ type CreateSessionInput struct {
 	// automation so a typo cannot silently broaden authority.
 	StrictPermissionMode bool
 	Model                *string
+	ModelParameters      map[string]string
 	ModelPlanID          *string
 	PlanMode             *bool
 	BrowserUse           *bool

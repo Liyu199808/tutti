@@ -633,7 +633,9 @@ export interface AgentGUINodeViewProps {
     updateSelectedProjectPath?: AgentComposerProps["onProjectPathChange"];
     updateComposerSettings: (settings: {
       model?: string | null;
+      modelParameters?: Record<string, string>;
       reasoningEffort?: string | null;
+      speed?: string | null;
       planMode?: boolean;
       permissionMode?: string;
     }) => void;

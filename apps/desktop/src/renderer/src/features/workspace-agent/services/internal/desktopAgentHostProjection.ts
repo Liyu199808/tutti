@@ -10,6 +10,7 @@ export type AgentHostAgentSessionComposerSettings =
 
 export interface AgentHostAgentSessionComposerSettingsInput {
   model?: string | null;
+  modelParameters?: Record<string, string> | null;
   permissionModeId?: string | null;
   planMode?: boolean | null;
   reasoningEffort?: string | null;
@@ -34,13 +35,26 @@ export function pathFromFileReadPayload(payload: {
 export function normalizeComposerSettings(
   settings: AgentHostAgentSessionComposerSettingsInput | null | undefined
 ): AgentHostAgentSessionComposerSettings {
+  const modelParameters = normalizedStringRecord(settings?.modelParameters);
   return {
     model: normalizedOptionalString(settings?.model),
+    ...(modelParameters ? { modelParameters } : {}),
     permissionModeId: resolveComposerPermissionMode(settings),
     planMode: Boolean(settings?.planMode),
     reasoningEffort: normalizedOptionalString(settings?.reasoningEffort),
     speed: normalizedOptionalString(settings?.speed)
   };
+}
+
+function normalizedStringRecord(
+  value: Record<string, string> | null | undefined
+): Record<string, string> | null {
+  const normalized = Object.fromEntries(
+    Object.entries(value ?? {}).filter(
+      ([key, item]) => key.trim().length > 0 && item.trim().length > 0
+    )
+  );
+  return Object.keys(normalized).length > 0 ? normalized : null;
 }
 
 export function resolveComposerPermissionMode(

@@ -129,6 +129,16 @@ Device-global desktop preferences are durable daemon state in the
 must be changed through the preferences service/API so the daemon can persist,
 normalize, and publish the authoritative preferences event.
 
+Agent composer defaults are keyed by exact Agent Target in
+`agent_composer_defaults_by_agent_target_json`. Target-global `speed` is the
+remembered Fast preference. Model-scoped Context, reasoning, and future
+parameter values live in the same target record under
+`modelParametersByBaseModel[baseModelId]`; they are not keyed by provider,
+workspace, cwd, or parameterized model id. Dedicated sparse preference
+transactions merge one target/base-model patch and publish a target-only
+invalidation, while the full desktop-preferences write keeps this column
+frozen to prevent stale snapshots from overwriting newer choices.
+
 `agent_cli_update_check_enabled` stores the
 `agentCliUpdateCheckEnabled` preference as a non-null SQLite boolean and
 defaults to `true`, including for existing databases upgraded by migration. It

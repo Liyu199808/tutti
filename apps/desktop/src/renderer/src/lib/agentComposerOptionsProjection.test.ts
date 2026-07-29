@@ -23,6 +23,7 @@ function agentActivityComposerOptionsFromTuttidResult(
     provider,
     reasoningConfig: { configurable: false, options: [] },
     reasoningOptionsByModel: {},
+    modelParameterProfiles: [],
     runtimeContext: {},
     skills: [],
     ...value
@@ -248,6 +249,87 @@ test("agent composer options preserve effective pre-session settings", () => {
     planMode: false,
     permissionModeId: "full-access"
   });
+});
+
+test("agent composer options preserve per-model parameter provenance and current-only unknown values", () => {
+  const options = agentActivityComposerOptionsFromTuttidResult("cursor", {
+    effectiveSettings: {
+      model: "composer-2.5[context=1m,experimental=future]",
+      modelParameters: {
+        context: "1m",
+        experimental: "future"
+      }
+    },
+    modelParameterProfiles: [
+      {
+        modelId: "composer-2.5[context=1m,experimental=future]",
+        baseModelId: "composer-2.5",
+        parameters: [
+          {
+            id: "context",
+            semantic: "context",
+            source: "acp",
+            preferenceScope: "baseModel",
+            availability: "supported",
+            configurable: true,
+            currentValue: "1m",
+            options: [
+              { id: "200k", label: "200K", value: "200k" },
+              { id: "1m", label: "1M", value: "1m" }
+            ]
+          },
+          {
+            id: "experimental",
+            semantic: "experimental",
+            source: "parameterized-model",
+            preferenceScope: "baseModel",
+            availability: "unknown",
+            configurable: false,
+            currentValue: "future",
+            options: []
+          }
+        ]
+      }
+    ]
+  });
+
+  assert.deepEqual(options.effectiveSettings?.modelParameters, {
+    context: "1m",
+    experimental: "future"
+  });
+  assert.deepEqual(options.modelParameterProfiles, [
+    {
+      modelId: "composer-2.5[context=1m,experimental=future]",
+      baseModelId: "composer-2.5",
+      parameters: [
+        {
+          id: "context",
+          semantic: "context",
+          source: "acp",
+          preferenceScope: "baseModel",
+          availability: "supported",
+          configurable: true,
+          currentValue: "1m",
+          defaultValue: null,
+          options: [
+            { value: "200k", label: "200K" },
+            { value: "1m", label: "1M" }
+          ]
+        },
+        {
+          id: "experimental",
+          semantic: "experimental",
+          source: "parameterized-model",
+          preferenceScope: "baseModel",
+          availability: "unknown",
+          configurable: false,
+          currentValue: "future",
+          defaultValue: null,
+          options: []
+        }
+      ]
+    }
+  ]);
 });
 
 test("agent composer options keep requested-origin provenance on model entries", () => {

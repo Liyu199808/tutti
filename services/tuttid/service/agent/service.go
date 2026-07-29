@@ -194,6 +194,7 @@ func (s *Service) CreateWithResult(ctx context.Context, workspaceID string, inpu
 	ctx = withServicePreparedRuntime(ctx, s, prepared)
 	runtimeSettings := ComposerSettings{
 		Model:            clampComposerModelForLaunch(provider, input.ProviderTargetRef, value(input.Model)),
+		ModelParameters:  cloneStringValues(input.ModelParameters),
 		PermissionModeID: value(input.PermissionModeID),
 		PlanMode:         clampComposerPlanModeForLaunch(provider, input.ProviderTargetRef, valueBool(input.PlanMode)),
 		BrowserUse:       input.BrowserUse,
@@ -208,6 +209,7 @@ func (s *Service) CreateWithResult(ctx context.Context, workspaceID string, inpu
 		CapabilityRefs: append([]CapabilityReference(nil), input.CapabilityRefs...), Title: input.Title, Cwd: stringPointer(prepared.Cwd),
 		PermissionModeID: input.PermissionModeID,
 		Model:            stringPointer(runtimeSettings.Model),
+		ModelParameters:  cloneStringValues(runtimeSettings.ModelParameters),
 		PlanMode:         boolPointer(runtimeSettings.PlanMode),
 		BrowserUse:       input.BrowserUse, ComputerUse: input.ComputerUse,
 		ProviderTargetRef:      input.ProviderTargetRef,
@@ -334,6 +336,17 @@ func (s *Service) applyCreateSessionComposerDefaults(ctx context.Context, input 
 	}
 	if input.Speed == nil && strings.TrimSpace(defaults.Speed) != "" {
 		input.Speed = stringPointer(defaults.Speed)
+	}
+	baseModelID := strings.TrimSpace(value(input.Model))
+	if remembered := defaults.ModelParametersByBaseModel[baseModelID]; len(remembered) > 0 {
+		if input.ModelParameters == nil {
+			input.ModelParameters = map[string]string{}
+		}
+		for parameterID, selected := range remembered {
+			if strings.TrimSpace(input.ModelParameters[parameterID]) == "" {
+				input.ModelParameters[parameterID] = selected
+			}
+		}
 	}
 	return nil
 }

@@ -427,6 +427,7 @@ export function ComposerFooter({
                 modelTooltipVersionLabel: labels.modelTooltipVersionLabel,
                 planModeLabel: labels.planModeLabel,
                 reasoningLabel: labels.reasoningLabel,
+                contextLabel: labels.contextLabel,
                 reasoningDegreeLabel: labels.reasoningDegreeLabel,
                 reasoningOptionDefault: labels.reasoningOptionDefault,
                 reasoningOptionMinimal: labels.reasoningOptionMinimal,

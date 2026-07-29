@@ -609,6 +609,9 @@ export class WorkspaceAgentActivityService
         initialTuttiModeActivation: input.initialTuttiModeActivation ?? null,
         submitDiagnostics: input.submitDiagnostics,
         model: input.settings?.model ?? null,
+        modelParameters: input.settings?.modelParameters
+          ? { ...input.settings.modelParameters }
+          : undefined,
         planMode: input.settings?.planMode ?? null,
         permissionModeId: resolveComposerPermissionMode(input.settings),
         reasoningEffort: input.settings?.reasoningEffort ?? null,

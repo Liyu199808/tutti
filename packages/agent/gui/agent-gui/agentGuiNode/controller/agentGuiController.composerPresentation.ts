@@ -111,6 +111,9 @@ export function effectiveComposerSettingsFromOptions(
   }
   return {
     model: normalizeOptionalText(settings.model),
+    ...(settings.modelParameters
+      ? { modelParameters: { ...settings.modelParameters } }
+      : {}),
     reasoningEffort: normalizeOptionalText(
       settings.reasoningEffort
     ) as AgentSessionReasoningEffort | null,
@@ -295,8 +298,18 @@ export function resolvePresentedComposerSettings(input: {
     }
     return fallback;
   };
+  const firstModelParameters = (): Record<string, string> | undefined => {
+    for (const layer of layers) {
+      if (layer?.modelParameters !== undefined) {
+        return { ...layer.modelParameters };
+      }
+    }
+    return undefined;
+  };
+  const modelParameters = firstModelParameters();
   return {
     model: firstText("model"),
+    ...(modelParameters ? { modelParameters } : {}),
     reasoningEffort: firstText(
       "reasoningEffort"
     ) as AgentSessionReasoningEffort | null,

@@ -502,6 +502,44 @@ future mutations; `effectiveModel` is presentation-only runtime evidence for
 describing what Default currently resolves to. Activity adapters and AgentGUI
 must not replace the selection with that resolved value or infer it from the
 catalog's Default entry.
+
+Per-model Context, reasoning, speed, and future parameters use the typed
+`modelParameterProfiles` projection. Every profile binds an exact `modelId` to
+a `baseModelId`; every parameter carries its stable id, provider-neutral
+semantic, auditable source, preference scope, availability, configurable flag,
+verified current/default values, and candidate options. The daemon resolves
+each parameter independently with this fixed precedence:
+
+```text
+ACP structured metadata
+  > exact-model compatibility preset
+  > model-family compatibility preset
+  > verified current value parsed from a parameterized model id
+```
+
+The last source is current-value evidence only. An unknown parameter or a
+current value absent from the candidate list is preserved in the profile and
+in `settings.modelParameters`; it must not become configurable unless a higher
+source supplies a selectable range. Older daemons may omit the profile array
+during a rolling upgrade, which remains unknown rather than unsupported.
+Shared GUI code branches on parameter semantic and preference scope, never on
+provider identity.
+
+Session settings keep legacy first-class `reasoningEffort` and `speed` fields.
+Additional model-scoped selections use the sparse, opaque `modelParameters`
+map so an older consumer cannot erase a newer parameter. A live
+`UpdateSettings` applies the runtime patch first and persists only the runtime-
+accepted result; rejection leaves canonical settings unchanged. The change is
+next-request configuration and never mutates the already-running Turn.
+
+Remembered defaults have a separate ownership split. Context, reasoning, and
+future model parameters are stored under
+`agentComposerDefaultsByAgentTarget[target].modelParametersByBaseModel[baseModelId]`.
+Fast remains the top-level `speed` preference on that exact Agent Target, even
+though support and actual state are reported per model. Sparse daemon
+transactions merge both forms and publish the same target-only invalidation;
+renderer local storage and full-preferences rewrites are not persistence
+authorities.
 An omitted pre-session descriptor means the connected daemon predates the
 typed composer capability contract and must remain an unknown/loading state.
 Core capability booleans must not be reconstructed from private
@@ -722,7 +760,7 @@ createAgentSessionEngine({
   identity: { workspaceId, origin },
   clock,
   scheduler,
-  commandPort
+  commandPort,
 });
 ```
 
@@ -768,32 +806,32 @@ export interface AgentActivityAdapter {
   }): Promise<AgentActivityMessagePage>;
 
   loadComposerOptions(
-    input: AgentActivityLoadComposerOptionsInput
+    input: AgentActivityLoadComposerOptionsInput,
   ): Promise<AgentActivityComposerOptions>;
 
   createSession(
-    input: AgentActivityCreateSessionInput
+    input: AgentActivityCreateSessionInput,
   ): Promise<AgentActivitySession>;
   sendInput(
-    input: AgentActivitySendInput
+    input: AgentActivitySendInput,
   ): Promise<AgentActivitySendInputResult>;
   goalControl(
-    input: AgentActivityGoalControlInput
+    input: AgentActivityGoalControlInput,
   ): Promise<AgentActivityGoalControlResult>;
   submitInteractive(
-    input: AgentActivitySubmitInteractiveInput
+    input: AgentActivitySubmitInteractiveInput,
   ): Promise<AgentActivitySubmitInteractiveResult>;
   deleteSession(
-    input: AgentActivityDeleteSessionInput
+    input: AgentActivityDeleteSessionInput,
   ): Promise<AgentActivityDeleteSessionResult>;
   deleteSessions(
-    input: AgentActivityDeleteSessionsInput
+    input: AgentActivityDeleteSessionsInput,
   ): Promise<AgentActivityDeleteSessionsResult>;
   renameSession(
-    input: AgentActivityRenameSessionInput
+    input: AgentActivityRenameSessionInput,
   ): Promise<AgentActivitySession>;
   setSessionPinned(
-    input: AgentActivitySetSessionPinnedInput
+    input: AgentActivitySetSessionPinnedInput,
   ): Promise<AgentActivitySession>;
 }
 ```

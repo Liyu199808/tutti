@@ -230,6 +230,7 @@ export const defaultDesktopAgentProvider: DesktopDefaultAgentProvider = "codex";
 
 export interface DesktopAgentComposerDefaults {
   model?: string;
+  modelParametersByBaseModel?: Record<string, Record<string, string>>;
   permissionModeId?: string;
   reasoningEffort?: string;
   speed?: string;
@@ -251,6 +252,11 @@ export interface DesktopAgentComposerDefaultsPatch {
   permissionModeId?: string | null;
   reasoningEffort?: string | null;
   speed?: string | null;
+}
+
+export interface DesktopAgentModelParametersPatch {
+  baseModelId: string;
+  values: Record<string, string | null>;
 }
 
 export const desktopAgentComposerDefaultsFields = [
@@ -562,11 +568,17 @@ export function normalizeDesktopAgentComposerDefaults(
 
   const defaults: DesktopAgentComposerDefaults = {};
   const model = normalizeOptionalText(value.model);
+  const modelParametersByBaseModel = normalizeModelParametersByBaseModel(
+    value.modelParametersByBaseModel
+  );
   const permissionModeId = normalizeOptionalText(value.permissionModeId);
   const reasoningEffort = normalizeOptionalText(value.reasoningEffort);
   const speed = normalizeOptionalText(value.speed);
   if (model) {
     defaults.model = model;
+  }
+  if (Object.keys(modelParametersByBaseModel).length > 0) {
+    defaults.modelParametersByBaseModel = modelParametersByBaseModel;
   }
   if (permissionModeId) {
     defaults.permissionModeId = permissionModeId;
@@ -772,12 +784,65 @@ export function desktopAgentComposerDefaultsEqual(
   const normalizedRight = normalizeDesktopAgentComposerDefaults(right);
   return (
     (normalizedLeft?.model ?? null) === (normalizedRight?.model ?? null) &&
+    modelParametersByBaseModelEqual(
+      normalizedLeft?.modelParametersByBaseModel,
+      normalizedRight?.modelParametersByBaseModel
+    ) &&
     (normalizedLeft?.permissionModeId ?? null) ===
       (normalizedRight?.permissionModeId ?? null) &&
     (normalizedLeft?.reasoningEffort ?? null) ===
       (normalizedRight?.reasoningEffort ?? null) &&
     (normalizedLeft?.speed ?? null) === (normalizedRight?.speed ?? null)
   );
+}
+
+function normalizeModelParametersByBaseModel(
+  value: unknown
+): Record<string, Record<string, string>> {
+  if (!isRecord(value)) return {};
+  const result: Record<string, Record<string, string>> = {};
+  for (const [rawBaseModelId, rawParameters] of Object.entries(value)) {
+    const baseModelId = normalizeOptionalText(rawBaseModelId);
+    if (!baseModelId || !isRecord(rawParameters)) continue;
+    const parameters: Record<string, string> = {};
+    for (const [rawParameterId, rawSelected] of Object.entries(rawParameters)) {
+      if (
+        rawParameterId.trim() &&
+        typeof rawSelected === "string" &&
+        rawSelected.trim()
+      ) {
+        parameters[rawParameterId] = rawSelected;
+      }
+    }
+    if (Object.keys(parameters).length > 0) result[baseModelId] = parameters;
+  }
+  return result;
+}
+
+function modelParametersByBaseModelEqual(
+  left: Record<string, Record<string, string>> | undefined,
+  right: Record<string, Record<string, string>> | undefined
+): boolean {
+  const normalizedLeft = normalizeModelParametersByBaseModel(left);
+  const normalizedRight = normalizeModelParametersByBaseModel(right);
+  const baseModelIds = new Set([
+    ...Object.keys(normalizedLeft),
+    ...Object.keys(normalizedRight)
+  ]);
+  for (const baseModelId of baseModelIds) {
+    const leftParameters = normalizedLeft[baseModelId] ?? {};
+    const rightParameters = normalizedRight[baseModelId] ?? {};
+    const parameterIds = new Set([
+      ...Object.keys(leftParameters),
+      ...Object.keys(rightParameters)
+    ]);
+    for (const parameterId of parameterIds) {
+      if (leftParameters[parameterId] !== rightParameters[parameterId]) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 function normalizeOptionalText(value: unknown): string | null {

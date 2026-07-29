@@ -206,6 +206,7 @@ export function useAgentGUIViewLabels(input: {
       loadingOptions: t("agentHost.agentGui.loadingOptions"),
       inheritedUnavailable: t("agentHost.agentGui.inheritedUnavailable"),
       reasoningLabel: t("agentHost.agentGui.reasoningLabel"),
+      contextLabel: t("agentHost.agentGui.contextLabel"),
       reasoningDegreeLabel: t("agentHost.agentGui.reasoningDegreeLabel"),
       reasoningOptionDefault: t("agentHost.agentGui.reasoningOptionDefault"),
       reasoningOptionMinimal: t("agentHost.agentGui.reasoningOptionMinimal"),

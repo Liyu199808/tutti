@@ -107,7 +107,7 @@ func (a *standardACPAdapter) applySessionConfigOptions(
 	settings := session.SettingsValue()
 	supported := acpConfigOptionIDs(startResult)
 	modelsAPI := acpModelsResultPresent(startResult)
-	if len(supported) == 0 && !modelsAPI {
+	if len(supported) == 0 && !modelsAPI && len(settings.ModelParameters) == 0 {
 		a.logStandardACPStartupDiagnostics("config_options.skipped", map[string]any{
 			"room_id":             session.RoomID,
 			"agent_session_id":    session.AgentSessionID,
@@ -117,17 +117,20 @@ func (a *standardACPAdapter) applySessionConfigOptions(
 		return nil
 	}
 	a.logStandardACPStartupDiagnostics("config_options.start", map[string]any{
-		"room_id":              session.RoomID,
-		"agent_session_id":     session.AgentSessionID,
-		"provider_session_id":  session.ProviderSessionID,
-		"supported_option_ids": acpConfigOptionIDList(startResult),
-		"model_requested":      strings.TrimSpace(settings.Model) != "",
-		"effort_requested":     strings.TrimSpace(settings.ReasoningEffort) != "",
+		"room_id":                    session.RoomID,
+		"agent_session_id":           session.AgentSessionID,
+		"provider_session_id":        session.ProviderSessionID,
+		"supported_option_ids":       acpConfigOptionIDList(startResult),
+		"model_requested":            strings.TrimSpace(settings.Model) != "",
+		"effort_requested":           strings.TrimSpace(settings.ReasoningEffort) != "",
+		"model_parameters_requested": len(settings.ModelParameters),
 	})
-	// Startup config options are applied best-effort: a value the agent
+	// Legacy startup config options are applied best-effort: a value the agent
 	// rejects (e.g. a model alias the signed-in account cannot access) must
 	// not abort the whole session. The session stays usable on the agent's
 	// default, and the user can pick a supported value from the live list.
+	// Generic model parameters are different: they represent an explicit
+	// capability-backed selection and must be confirmed or fail startup.
 	modelConfigID := a.effectiveModelConfigOptionID()
 	modelSet := false
 	if model := strings.TrimSpace(settings.Model); model != "" && modelConfigID != "" &&
@@ -175,6 +178,22 @@ func (a *standardACPAdapter) applySessionConfigOptions(
 			return fmt.Errorf("agent session ACP fast configuration failed: %w", err)
 		}
 		a.updateSessionConfigOption(session.AgentSessionID, "fast", speed)
+	}
+	modelParameterIDs := make([]string, 0, len(settings.ModelParameters))
+	for configID := range settings.ModelParameters {
+		modelParameterIDs = append(modelParameterIDs, configID)
+	}
+	sort.Strings(modelParameterIDs)
+	for _, rawConfigID := range modelParameterIDs {
+		configID := rawConfigID
+		value := settings.ModelParameters[rawConfigID]
+		if strings.TrimSpace(configID) == "" || strings.TrimSpace(value) == "" {
+			return fmt.Errorf("agent session ACP model parameter %q has no selectable value", configID)
+		}
+		if err := a.setSessionConfigOption(ctx, client, session, configID, value); err != nil {
+			return fmt.Errorf("agent session ACP model parameter %s configuration failed: %w", configID, err)
+		}
+		a.updateSessionConfigOption(session.AgentSessionID, configID, value)
 	}
 	a.logStandardACPStartupDiagnostics("config_options.succeeded", map[string]any{
 		"room_id":             session.RoomID,
@@ -465,6 +484,9 @@ func (a *standardACPAdapter) ApplySessionSettings(
 	}
 	acpSession := a.getSession(session.AgentSessionID)
 	if acpSession == nil || acpSession.client == nil {
+		if len(patch.ModelParameters) > 0 {
+			return errors.New("agent session ACP model parameters cannot be confirmed without a live session")
+		}
 		return nil
 	}
 	if strings.TrimSpace(session.ProviderSessionID) == "" {
@@ -553,8 +575,33 @@ func (a *standardACPAdapter) ApplySessionSettings(
 		}
 	}
 
+	if len(patch.ModelParameters) > 0 {
+		keys := make([]string, 0, len(patch.ModelParameters))
+		for key := range patch.ModelParameters {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			configID := key
+			value := patch.ModelParameters[key]
+			if strings.TrimSpace(configID) == "" || value == nil || strings.TrimSpace(*value) == "" {
+				return fmt.Errorf("agent session ACP model parameter %q cannot be cleared without an advertised reset value", configID)
+			}
+			selected := *value
+			if a.sessionConfigOptionMatches(session.AgentSessionID, configID, selected) {
+				continue
+			}
+			if err := a.setSessionConfigOption(ctx, acpSession.client, session, configID, selected); err != nil {
+				return fmt.Errorf("agent session ACP model parameter %s configuration failed: %w", configID, err)
+			}
+			a.updateSessionConfigOption(session.AgentSessionID, configID, selected)
+		}
+	}
+
 	return nil
 }
+
+func (*standardACPAdapter) SupportsModelParameterSettings() {}
 
 func (a *standardACPAdapter) sessionUsesACPModelsAPI(agentSessionID string) bool {
 	if a == nil {

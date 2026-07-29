@@ -375,6 +375,7 @@ const modelSettingsLabels: AgentComposerSettingsMenuLabels = {
   loadingOptions: "Loading…",
   inheritedUnavailable: "Unavailable",
   reasoningLabel: "Reasoning",
+  contextLabel: "Context",
   reasoningDegreeLabel: "Reasoning degree",
   reasoningOptionDefault: "Default",
   reasoningOptionMinimal: "Minimal",

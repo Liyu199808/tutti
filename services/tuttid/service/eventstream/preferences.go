@@ -18,6 +18,15 @@ type AgentComposerDefaultsPatcher interface {
 	PatchAgentComposerDefaultsForTarget(context.Context, preferencesservice.PatchAgentComposerDefaultsForTargetInput) (preferencesbiz.AgentComposerDefaults, error)
 }
 
+type AgentModelParametersPatcher interface {
+	PatchAgentModelParametersForTarget(context.Context, preferencesservice.PatchAgentModelParametersForTargetInput) (preferencesbiz.AgentComposerDefaults, error)
+}
+
+type AgentComposerPreferencesPatcher interface {
+	AgentComposerDefaultsPatcher
+	AgentModelParametersPatcher
+}
+
 func preferencesTopicDefinitions() []TopicDefinition {
 	return []TopicDefinition{
 		{
@@ -133,7 +142,7 @@ func (p DesktopPreferencesPublisher) PublishAgentComposerDefaultsChanged(ctx con
 }
 
 func NewPreferencesAgentComposerDefaultsPatchRequestedHandler(
-	patcher AgentComposerDefaultsPatcher,
+	patcher AgentComposerPreferencesPatcher,
 ) IntentHandler {
 	return func(ctx context.Context, event ClientEvent) error {
 		if patcher == nil {
@@ -143,9 +152,17 @@ func NewPreferencesAgentComposerDefaultsPatchRequestedHandler(
 		if err := json.Unmarshal(event.Payload, &decoded); err != nil {
 			return fmt.Errorf("decode payload: %w", err)
 		}
-		if _, err := patcher.PatchAgentComposerDefaultsForTarget(ctx, preferencesservice.PatchAgentComposerDefaultsForTargetInput{
+		if decoded.Patch.ModelParameters != nil {
+			if _, err := patcher.PatchAgentModelParametersForTarget(ctx, preferencesservice.PatchAgentModelParametersForTargetInput{
+				AgentTargetID: decoded.AgentTargetID,
+				BaseModelID:   decoded.Patch.ModelParameters.BaseModelID,
+				Patch:         decoded.Patch.ModelParameters.Values,
+			}); err != nil {
+				return fmt.Errorf("patch agent model parameters: %w", err)
+			}
+		} else if _, err := patcher.PatchAgentComposerDefaultsForTarget(ctx, preferencesservice.PatchAgentComposerDefaultsForTargetInput{
 			AgentTargetID: decoded.AgentTargetID,
-			Patch:         decoded.Patch,
+			Patch:         decoded.Patch.scalarPatch(),
 		}); err != nil {
 			return fmt.Errorf("patch agent composer defaults: %w", err)
 		}

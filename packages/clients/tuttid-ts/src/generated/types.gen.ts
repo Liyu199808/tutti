@@ -455,6 +455,14 @@ export type DesktopAgentComposerDefaults = {
   permissionModeId?: string;
   reasoningEffort?: string;
   speed?: string;
+  /**
+   * Per-base-model Context, reasoning, and future model-parameter memories. Fast remains the target-global speed field on the exact Agent Target defaults record.
+   */
+  modelParametersByBaseModel?: {
+    [key: string]: {
+      [key: string]: string;
+    };
+  };
 };
 
 export type DesktopAgentConversationDetailMode = "coding" | "general";
@@ -1674,6 +1682,27 @@ export type WorkspaceAgentProvider = string;
 
 export type AgentSessionComposerSettings = {
   model?: string | null;
+  /**
+   * Opaque provider-confirmed model parameter values keyed by the stable parameter ids advertised by modelParameterProfiles. Unknown keys and values are preserved; their presence does not imply a selectable range.
+   */
+  modelParameters?: {
+    [key: string]: string;
+  };
+  permissionModeId?: string | null;
+  planMode?: boolean | null;
+  browserUse?: boolean | null;
+  reasoningEffort?: string | null;
+  speed?: string | null;
+};
+
+export type AgentSessionComposerSettingsPatch = {
+  model?: string | null;
+  /**
+   * Sparse model-parameter mutation. Null removes one key; absent keys remain unchanged. A live Session persists these values only after the runtime accepts the complete patch.
+   */
+  modelParameters?: {
+    [key: string]: string | null;
+  };
   permissionModeId?: string | null;
   planMode?: boolean | null;
   browserUse?: boolean | null;
@@ -1750,6 +1779,10 @@ export type AgentProviderComposerOptionsResponse = {
   permissionConfig: PermissionConfig;
   reasoningConfig: AgentProviderComposerConfig;
   reasoningOptionsByModel: AgentProviderComposerReasoningOptionsByModel;
+  /**
+   * Resolved per-model parameter capabilities. The daemon applies source precedence (ACP before explicit compatibility presets) and the shared GUI consumes this provider-neutral projection without branching on provider identity.
+   */
+  modelParameterProfiles?: Array<AgentProviderModelParameterProfile>;
   speedConfig?: AgentProviderComposerConfig;
   effectiveSettings: AgentSessionComposerSettings;
   /**
@@ -1780,6 +1813,42 @@ export type AgentProviderComposerReasoningOptionsByModel = {
 };
 
 export type AgentProviderComposerReasoningProfile = {
+  defaultValue?: string | null;
+  options: Array<AgentProviderComposerConfigOptionValue>;
+};
+
+export type AgentProviderModelParameterProfile = {
+  modelId: string;
+  /**
+   * Durable memory key shared by parameterized variants of one base model.
+   */
+  baseModelId: string;
+  parameters: Array<AgentProviderModelParameterCapability>;
+};
+
+export type AgentProviderModelParameterCapability = {
+  id: string;
+  /**
+   * Provider-neutral semantic such as context, reasoning, speed, or an unknown pass-through id.
+   */
+  semantic: string;
+  /**
+   * Auditable source such as acp, exact-model-preset, model-family-preset, or parameterized-model.
+   */
+  source: string;
+  /**
+   * baseModel for Context/reasoning memory or agentTarget for target-global Fast memory.
+   */
+  preferenceScope: string;
+  /**
+   * supported, unsupported, or unknown; unknown values remain forward compatible.
+   */
+  availability: string;
+  configurable: boolean;
+  /**
+   * Verified current value; it may be absent from options and must still be preserved.
+   */
+  currentValue?: string | null;
   defaultValue?: string | null;
   options: Array<AgentProviderComposerConfigOptionValue>;
 };
@@ -2893,6 +2962,12 @@ export type CreateWorkspaceAgentSessionRequest = {
   cwd?: string | null;
   permissionModeId?: string | null;
   model?: string | null;
+  /**
+   * Explicit model-scoped parameter values selected before Session creation.
+   */
+  modelParameters?: {
+    [key: string]: string;
+  };
   reasoningEffort?: string | null;
   /**
    * Classifies a session that is intentionally not attached to a workspace project.
@@ -11684,7 +11759,7 @@ export type SendWorkspaceAgentSessionInputResponse2 =
   SendWorkspaceAgentSessionInputResponses[keyof SendWorkspaceAgentSessionInputResponses];
 
 export type UpdateWorkspaceAgentSessionSettingsData = {
-  body: AgentSessionComposerSettings;
+  body: AgentSessionComposerSettingsPatch;
   path: {
     workspaceID: string;
     agentSessionID: string;

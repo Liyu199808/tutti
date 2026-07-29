@@ -503,17 +503,6 @@ func generatedAgentSessionSection(section agentservice.SessionSection) (tuttigen
 	return response, nil
 }
 
-func composerSettingsFromGenerated(settings tuttigenerated.AgentSessionComposerSettings) agentservice.ComposerSettings {
-	return agentservice.ComposerSettings{
-		Model:            optionalStringValue(settings.Model),
-		PermissionModeID: optionalStringValue(settings.PermissionModeId),
-		PlanMode:         settings.PlanMode != nil && *settings.PlanMode,
-		BrowserUse:       settings.BrowserUse,
-		ReasoningEffort:  optionalStringValue(settings.ReasoningEffort),
-		Speed:            optionalStringValue(settings.Speed),
-	}
-}
-
 func (api DaemonAPI) composerDefaultLocale(ctx context.Context) string {
 	if api.PreferencesService == nil {
 		return ""
@@ -536,19 +525,9 @@ func (api DaemonAPI) agentConversationDetailMode(ctx context.Context) string {
 	return preferencesbiz.NormalizeDesktopAgentConversationDetailMode(preferences.AgentConversationDetailMode)
 }
 
-func composerSettingsPatchFromGenerated(settings tuttigenerated.AgentSessionComposerSettings) agentservice.ComposerSettingsPatch {
-	return agentservice.ComposerSettingsPatch{
-		Model:            settings.Model,
-		PermissionModeID: settings.PermissionModeId,
-		PlanMode:         settings.PlanMode,
-		BrowserUse:       settings.BrowserUse,
-		ReasoningEffort:  settings.ReasoningEffort,
-		Speed:            settings.Speed,
-	}
-}
-
 func generatedAgentProviderComposerOptions(options agentservice.ComposerOptions) tuttigenerated.AgentProviderComposerOptionsResponse {
 	effectiveSettings := generatedAgentSessionComposerSettings(options.EffectiveSettings)
+	modelParameterProfiles := generatedAgentProviderModelParameterProfiles(options.ModelParameterProfiles)
 	return tuttigenerated.AgentProviderComposerOptionsResponse{
 		Behavior: tuttigenerated.AgentProviderComposerBehavior{
 			CollapseModelOptionsToLatest:        options.Behavior.CollapseModelOptionsToLatest,
@@ -568,10 +547,11 @@ func generatedAgentProviderComposerOptions(options agentservice.ComposerOptions)
 		ReasoningOptionsByModel: generatedAgentProviderComposerReasoningOptionsByModel(
 			options.ReasoningOptionsByModel,
 		),
-		SpeedConfig:        generatedComposerConfigOptionPointer(options.SpeedConfig),
-		RuntimeContext:     options.RuntimeContext,
-		Skills:             generatedAgentProviderSkillOptions(options.Skills),
-		SlashCommandPolicy: generatedAgentSlashCommandPolicy(options.SlashCommandPolicy),
+		ModelParameterProfiles: &modelParameterProfiles,
+		SpeedConfig:            generatedComposerConfigOptionPointer(options.SpeedConfig),
+		RuntimeContext:         options.RuntimeContext,
+		Skills:                 generatedAgentProviderSkillOptions(options.Skills),
+		SlashCommandPolicy:     generatedAgentSlashCommandPolicy(options.SlashCommandPolicy),
 	}
 }
 
@@ -593,20 +573,6 @@ func generatedAgentSlashCommandPolicy(
 		CommandEffects:              effects,
 		CommandCatalogAuthoritative: boolPointer(policy.CommandCatalogAuthoritative),
 	}
-}
-
-func generatedAgentSessionComposerSettings(settings agentservice.ComposerSettings) tuttigenerated.AgentSessionComposerSettings {
-	result := tuttigenerated.AgentSessionComposerSettings{
-		Model:            optionalStringPointer(strings.TrimSpace(settings.Model)),
-		PermissionModeId: optionalStringPointer(strings.TrimSpace(settings.PermissionModeID)),
-		PlanMode:         boolPointer(settings.PlanMode),
-		ReasoningEffort:  optionalStringPointer(strings.TrimSpace(settings.ReasoningEffort)),
-		Speed:            optionalStringPointer(strings.TrimSpace(settings.Speed)),
-	}
-	if settings.BrowserUse != nil {
-		result.BrowserUse = settings.BrowserUse
-	}
-	return result
 }
 
 func generatedPermissionConfig(config agentservice.PermissionConfig) tuttigenerated.PermissionConfig {

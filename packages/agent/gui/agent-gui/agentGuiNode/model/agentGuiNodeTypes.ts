@@ -267,10 +267,19 @@ export interface AgentGUIComposerModelPlanVM {
   protocol?: string | null;
 }
 
+export interface AgentGUIComposerModelParameterVM {
+  id: string;
+  label: string;
+  currentValue: string | null;
+  configurable: boolean;
+  options: AgentGUIComposerSettingOption[];
+}
+
 export interface AgentGUIComposerSettingsVM {
   sessionSettings: AgentSessionComposerSettings | null;
   draftSettings: {
     model: string | null;
+    modelParameters?: Record<string, string>;
     reasoningEffort: AgentSessionReasoningEffort | null;
     speed: AgentSessionSpeed | null;
     planMode: boolean;
@@ -329,6 +338,8 @@ export interface AgentGUIComposerSettingsVM {
   // a new model pick applies from the next request, so the model menu shows
   // the switch-effect footer hint.
   modelSwitchTakesEffectNextTurn?: boolean;
+  /** Model-scoped ACP parameters, omitted for Auto and unknown models. */
+  modelParameters?: AgentGUIComposerModelParameterVM[];
   availableModels: AgentGUIComposerSettingOption[];
   availableReasoningEfforts: AgentGUIComposerSettingOption[];
   availableSpeeds: AgentGUIComposerSettingOption[];

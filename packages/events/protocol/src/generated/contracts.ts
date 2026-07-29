@@ -449,6 +449,10 @@ export interface PreferencesAgentComposerDefaultsPatchRequestedPayloadV1 {
     permissionModeId?: string | null;
     reasoningEffort?: string | null;
     speed?: string | null;
+    modelParameters?: {
+      baseModelId: string;
+      values: Record<string, string | null>;
+    };
   };
   clientMutationId?: string;
 }

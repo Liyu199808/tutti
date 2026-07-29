@@ -5021,7 +5021,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AgentSessionComposerSettings"
+              $ref: "#/components/schemas/AgentSessionComposerSettingsPatch"
       responses:
         "200":
           description: Workspace agent session settings updated
@@ -7691,6 +7691,16 @@ components:
           type: string
         speed:
           type: string
+        modelParametersByBaseModel:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: string
+          description: >-
+            Per-base-model Context, reasoning, and future model-parameter
+            memories. Fast remains the target-global speed field on the exact
+            Agent Target defaults record.
     DesktopAgentConversationDetailMode:
       type: string
       enum:
@@ -10531,6 +10541,46 @@ components:
         model:
           type: string
           nullable: true
+        modelParameters:
+          type: object
+          additionalProperties:
+            type: string
+          description: >-
+            Opaque provider-confirmed model parameter values keyed by the
+            stable parameter ids advertised by modelParameterProfiles. Unknown
+            keys and values are preserved; their presence does not imply a
+            selectable range.
+        permissionModeId:
+          type: string
+          nullable: true
+        planMode:
+          type: boolean
+          nullable: true
+        browserUse:
+          type: boolean
+          nullable: true
+        reasoningEffort:
+          type: string
+          nullable: true
+        speed:
+          type: string
+          nullable: true
+    AgentSessionComposerSettingsPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        model:
+          type: string
+          nullable: true
+        modelParameters:
+          type: object
+          additionalProperties:
+            type: string
+            nullable: true
+          description: >-
+            Sparse model-parameter mutation. Null removes one key; absent keys
+            remain unchanged. A live Session persists these values only after
+            the runtime accepts the complete patch.
         permissionModeId:
           type: string
           nullable: true
@@ -10693,6 +10743,15 @@ components:
           $ref: "#/components/schemas/AgentProviderComposerConfig"
         reasoningOptionsByModel:
           $ref: "#/components/schemas/AgentProviderComposerReasoningOptionsByModel"
+        modelParameterProfiles:
+          type: array
+          description: >-
+            Resolved per-model parameter capabilities. The daemon applies
+            source precedence (ACP before explicit compatibility presets) and
+            the shared GUI consumes this provider-neutral projection without
+            branching on provider identity.
+          items:
+            $ref: "#/components/schemas/AgentProviderModelParameterProfile"
         speedConfig:
           $ref: "#/components/schemas/AgentProviderComposerConfig"
         effectiveSettings:
@@ -10750,6 +10809,69 @@ components:
       required:
         - options
       properties:
+        defaultValue:
+          type: string
+          nullable: true
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentProviderComposerConfigOptionValue"
+    AgentProviderModelParameterProfile:
+      type: object
+      additionalProperties: false
+      required:
+        - modelId
+        - baseModelId
+        - parameters
+      properties:
+        modelId:
+          type: string
+          minLength: 1
+        baseModelId:
+          type: string
+          minLength: 1
+          description: Durable memory key shared by parameterized variants of one base model.
+        parameters:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentProviderModelParameterCapability"
+    AgentProviderModelParameterCapability:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - semantic
+        - source
+        - preferenceScope
+        - availability
+        - configurable
+        - options
+      properties:
+        id:
+          type: string
+          minLength: 1
+        semantic:
+          type: string
+          minLength: 1
+          description: Provider-neutral semantic such as context, reasoning, speed, or an unknown pass-through id.
+        source:
+          type: string
+          minLength: 1
+          description: Auditable source such as acp, exact-model-preset, model-family-preset, or parameterized-model.
+        preferenceScope:
+          type: string
+          minLength: 1
+          description: baseModel for Context/reasoning memory or agentTarget for target-global Fast memory.
+        availability:
+          type: string
+          minLength: 1
+          description: supported, unsupported, or unknown; unknown values remain forward compatible.
+        configurable:
+          type: boolean
+        currentValue:
+          type: string
+          nullable: true
+          description: Verified current value; it may be absent from options and must still be preserved.
         defaultValue:
           type: string
           nullable: true
@@ -13284,6 +13406,11 @@ components:
         model:
           type: string
           nullable: true
+        modelParameters:
+          type: object
+          additionalProperties:
+            type: string
+          description: Explicit model-scoped parameter values selected before Session creation.
         reasoningEffort:
           type: string
           nullable: true

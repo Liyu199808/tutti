@@ -500,6 +500,8 @@ export function areComposerSettingsVMsEqual(
       (right.modelPlan?.protocol ?? null) &&
     Boolean(left.modelSwitchTakesEffectNextTurn) ===
       Boolean(right.modelSwitchTakesEffectNextTurn) &&
+    JSON.stringify(left.modelParameters ?? []) ===
+      JSON.stringify(right.modelParameters ?? []) &&
     areComposerSettingOptionListsEqual(
       left.availableModels,
       right.availableModels
