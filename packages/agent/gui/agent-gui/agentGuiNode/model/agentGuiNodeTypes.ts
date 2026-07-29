@@ -269,6 +269,10 @@ export interface AgentGUIComposerModelPlanVM {
 
 export interface AgentGUIComposerModelParameterVM {
   id: string;
+  baseModelId: string;
+  semantic: string;
+  preferenceScope: string;
+  availability: string;
   label: string;
   currentValue: string | null;
   configurable: boolean;
@@ -338,7 +342,7 @@ export interface AgentGUIComposerSettingsVM {
   // a new model pick applies from the next request, so the model menu shows
   // the switch-effect footer hint.
   modelSwitchTakesEffectNextTurn?: boolean;
-  /** Model-scoped ACP parameters, omitted for Auto and unknown models. */
+  /** Provider-neutral model parameters; current-only values remain read-only. */
   modelParameters?: AgentGUIComposerModelParameterVM[];
   availableModels: AgentGUIComposerSettingOption[];
   availableReasoningEfforts: AgentGUIComposerSettingOption[];

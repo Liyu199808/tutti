@@ -2,10 +2,12 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	agenthost "github.com/tutti-os/tutti/packages/agent/host"
 	"github.com/tutti-os/tutti/services/tuttid/biz/agentprovider"
+	preferencesbiz "github.com/tutti-os/tutti/services/tuttid/biz/preferences"
 )
 
 func (s *Service) clampReasoningEffortForModel(
@@ -147,29 +149,91 @@ func (s *Service) UpdateSettings(ctx context.Context, workspaceID string, agentS
 		}
 	}
 	if settings.Speed != nil {
-		normalizedSpeed := normalizeSpeedForProvider(provider, *settings.Speed)
+		normalizedSpeed := strings.TrimSpace(*settings.Speed)
+		if !composerUsesCursorWireParameterizedModels(provider) {
+			normalizedSpeed = normalizeSpeedForProvider(provider, normalizedSpeed)
+		}
 		settings.Speed = &normalizedSpeed
 	}
 	beforeModel := strings.TrimSpace(currentSettings.Model)
 	if composerUsesCursorWireParameterizedModels(provider) {
-		settings = applyCursorWireComposerSettingsPatch(currentSettings, settings)
+		settings, err = s.applyRememberedCursorWireModelParameters(
+			ctx,
+			observed.Canonical.AgentTargetID,
+			currentSettings,
+			settings,
+		)
+		if err != nil {
+			return Session{}, err
+		}
+		if err := s.validateCursorWireComposerSettingsPatch(
+			agentSessionID,
+			runtimeContext,
+			currentSettings,
+			settings,
+		); err != nil {
+			return Session{}, err
+		}
 	}
+	requestedSettings := settings
 	result, err := s.ApplicationHost().UpdateSettings(ctx, agenthost.UpdateSettingsInput{
 		WorkspaceID: workspaceID, AgentSessionID: agentSessionID, Settings: settings,
 	})
 	if err != nil {
 		if composerUsesCursorWireParameterizedModels(provider) {
-			if rejection := cursorWireRejectionFromUpdateError(
-				agentSessionID,
-				beforeModel,
-				settings,
-				err,
-			); rejection != nil {
+			var providerErr *agenthost.ProviderError
+			if errors.As(err, &providerErr) {
+				rejection := cursorWireRejectionFromUpdateError(
+					agentSessionID,
+					beforeModel,
+					requestedSettings,
+					err,
+				)
 				s.cursorWireRejections().remember(rejection)
 				return Session{}, rejection
 			}
 		}
 		return Session{}, err
+	}
+	if composerUsesCursorWireParameterizedModels(provider) {
+		confirmedSettings := composerSettingsFromPayload(result.Canonical.Settings)
+		if result.Live && result.Session.Settings != nil {
+			confirmedSettings = *result.Session.Settings
+		}
+		agentTargetID := strings.TrimSpace(result.Canonical.AgentTargetID)
+		if requestedSettings.ModelParameters != nil && s.PersistAgentModelParameters != nil {
+			confirmedPatch := preferencesbiz.AgentModelParametersPatch{}
+			for parameterID, requested := range requestedSettings.ModelParameters {
+				if requested == nil {
+					confirmedPatch[parameterID] = nil
+					continue
+				}
+				if selected := strings.TrimSpace(confirmedSettings.ModelParameters[parameterID]); selected != "" {
+					value := selected
+					confirmedPatch[parameterID] = &value
+				}
+			}
+			if len(confirmedPatch) > 0 {
+				_ = s.PersistAgentModelParameters(
+					ctx,
+					agentTargetID,
+					parameterizedModelBaseID(confirmedSettings.Model),
+					confirmedPatch,
+				)
+			}
+		}
+		if requestedSettings.Speed != nil && s.PersistAgentComposerDefaults != nil {
+			confirmedSpeed := strings.TrimSpace(confirmedSettings.Speed)
+			if confirmedSpeed != "" {
+				_ = s.PersistAgentComposerDefaults(
+					ctx,
+					agentTargetID,
+					preferencesbiz.AgentComposerDefaultsPatch{
+						preferencesbiz.AgentComposerDefaultsFieldSpeed: &confirmedSpeed,
+					},
+				)
+			}
+		}
 	}
 	return s.projectHostSessionResult(
 		ctx,

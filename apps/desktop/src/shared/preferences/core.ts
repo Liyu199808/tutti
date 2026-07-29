@@ -249,6 +249,7 @@ export type DesktopAgentComposerDefaultsByAgentTarget = Record<
 // untouched, null (or empty) clears it, a non-empty string replaces it.
 export interface DesktopAgentComposerDefaultsPatch {
   model?: string | null;
+  modelParameters?: DesktopAgentModelParametersPatch;
   permissionModeId?: string | null;
   reasoningEffort?: string | null;
   speed?: string | null;
@@ -265,6 +266,9 @@ export const desktopAgentComposerDefaultsFields = [
   "reasoningEffort",
   "speed"
 ] as const;
+
+export type DesktopAgentComposerDefaultsField =
+  (typeof desktopAgentComposerDefaultsFields)[number];
 
 export type DesktopAgentGuiConversationRailCollapsedByProvider = Partial<
   Record<DesktopAgentProvider, boolean>

@@ -6,7 +6,7 @@ import "encoding/json"
 
 const (
 	BusinessEventProtocolVersion = 1
-	BusinessEventCatalogRevision = "sha256:1a8ab78774a60b4f"
+	BusinessEventCatalogRevision = "sha256:9588a68858fbb79a"
 )
 
 type Topic string
@@ -72,53 +72,61 @@ type PreferencesDesktopPreferences struct {
 	AgentCliUpdateCheckEnabled      bool `json:"agentCliUpdateCheckEnabled"`
 	AgentComposerDefaultsByProvider struct {
 		ClaudeCode *struct {
-			Model            *string `json:"model,omitempty"`
-			PermissionModeId *string `json:"permissionModeId,omitempty"`
-			ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-			Speed            *string `json:"speed,omitempty"`
+			Model                      *string                       `json:"model,omitempty"`
+			ModelParametersByBaseModel *map[string]map[string]string `json:"modelParametersByBaseModel,omitempty"`
+			PermissionModeId           *string                       `json:"permissionModeId,omitempty"`
+			ReasoningEffort            *string                       `json:"reasoningEffort,omitempty"`
+			Speed                      *string                       `json:"speed,omitempty"`
 		} `json:"claude-code,omitempty"`
 		Codex *struct {
-			Model            *string `json:"model,omitempty"`
-			PermissionModeId *string `json:"permissionModeId,omitempty"`
-			ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-			Speed            *string `json:"speed,omitempty"`
+			Model                      *string                       `json:"model,omitempty"`
+			ModelParametersByBaseModel *map[string]map[string]string `json:"modelParametersByBaseModel,omitempty"`
+			PermissionModeId           *string                       `json:"permissionModeId,omitempty"`
+			ReasoningEffort            *string                       `json:"reasoningEffort,omitempty"`
+			Speed                      *string                       `json:"speed,omitempty"`
 		} `json:"codex,omitempty"`
 		TuttiAgent *struct {
-			Model            *string `json:"model,omitempty"`
-			PermissionModeId *string `json:"permissionModeId,omitempty"`
-			ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-			Speed            *string `json:"speed,omitempty"`
+			Model                      *string                       `json:"model,omitempty"`
+			ModelParametersByBaseModel *map[string]map[string]string `json:"modelParametersByBaseModel,omitempty"`
+			PermissionModeId           *string                       `json:"permissionModeId,omitempty"`
+			ReasoningEffort            *string                       `json:"reasoningEffort,omitempty"`
+			Speed                      *string                       `json:"speed,omitempty"`
 		} `json:"tutti-agent,omitempty"`
 		Cursor *struct {
-			Model            *string `json:"model,omitempty"`
-			PermissionModeId *string `json:"permissionModeId,omitempty"`
-			ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-			Speed            *string `json:"speed,omitempty"`
+			Model                      *string                       `json:"model,omitempty"`
+			ModelParametersByBaseModel *map[string]map[string]string `json:"modelParametersByBaseModel,omitempty"`
+			PermissionModeId           *string                       `json:"permissionModeId,omitempty"`
+			ReasoningEffort            *string                       `json:"reasoningEffort,omitempty"`
+			Speed                      *string                       `json:"speed,omitempty"`
 		} `json:"cursor,omitempty"`
 		Nexight *struct {
-			Model            *string `json:"model,omitempty"`
-			PermissionModeId *string `json:"permissionModeId,omitempty"`
-			ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-			Speed            *string `json:"speed,omitempty"`
+			Model                      *string                       `json:"model,omitempty"`
+			ModelParametersByBaseModel *map[string]map[string]string `json:"modelParametersByBaseModel,omitempty"`
+			PermissionModeId           *string                       `json:"permissionModeId,omitempty"`
+			ReasoningEffort            *string                       `json:"reasoningEffort,omitempty"`
+			Speed                      *string                       `json:"speed,omitempty"`
 		} `json:"nexight,omitempty"`
 		Openclaw *struct {
-			Model            *string `json:"model,omitempty"`
-			PermissionModeId *string `json:"permissionModeId,omitempty"`
-			ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-			Speed            *string `json:"speed,omitempty"`
+			Model                      *string                       `json:"model,omitempty"`
+			ModelParametersByBaseModel *map[string]map[string]string `json:"modelParametersByBaseModel,omitempty"`
+			PermissionModeId           *string                       `json:"permissionModeId,omitempty"`
+			ReasoningEffort            *string                       `json:"reasoningEffort,omitempty"`
+			Speed                      *string                       `json:"speed,omitempty"`
 		} `json:"openclaw,omitempty"`
 		Opencode *struct {
-			Model            *string `json:"model,omitempty"`
-			PermissionModeId *string `json:"permissionModeId,omitempty"`
-			ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-			Speed            *string `json:"speed,omitempty"`
+			Model                      *string                       `json:"model,omitempty"`
+			ModelParametersByBaseModel *map[string]map[string]string `json:"modelParametersByBaseModel,omitempty"`
+			PermissionModeId           *string                       `json:"permissionModeId,omitempty"`
+			ReasoningEffort            *string                       `json:"reasoningEffort,omitempty"`
+			Speed                      *string                       `json:"speed,omitempty"`
 		} `json:"opencode,omitempty"`
 	} `json:"agentComposerDefaultsByProvider"`
 	AgentComposerDefaultsByAgentTarget *map[string]struct {
-		Model            *string `json:"model,omitempty"`
-		PermissionModeId *string `json:"permissionModeId,omitempty"`
-		ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-		Speed            *string `json:"speed,omitempty"`
+		Model                      *string                       `json:"model,omitempty"`
+		ModelParametersByBaseModel *map[string]map[string]string `json:"modelParametersByBaseModel,omitempty"`
+		PermissionModeId           *string                       `json:"permissionModeId,omitempty"`
+		ReasoningEffort            *string                       `json:"reasoningEffort,omitempty"`
+		Speed                      *string                       `json:"speed,omitempty"`
 	} `json:"agentComposerDefaultsByAgentTarget,omitempty"`
 	AgentGuiConversationRailCollapsedByProvider struct {
 		ClaudeCode *bool `json:"claude-code,omitempty"`
@@ -297,17 +305,8 @@ type PreferencesAgentComposerDefaultsChangedPayload struct {
 }
 
 type PreferencesAgentComposerDefaultsPatchRequestedPayload struct {
-	AgentTargetId string `json:"agentTargetId"`
-	Patch         struct {
-		Model            *string `json:"model,omitempty"`
-		PermissionModeId *string `json:"permissionModeId,omitempty"`
-		ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-		Speed            *string `json:"speed,omitempty"`
-		ModelParameters  *struct {
-			BaseModelId string             `json:"baseModelId"`
-			Values      map[string]*string `json:"values"`
-		} `json:"modelParameters,omitempty"`
-	} `json:"patch"`
+	AgentTargetId    string  `json:"agentTargetId"`
+	Patch            any     `json:"patch"`
 	ClientMutationId *string `json:"clientMutationId,omitempty"`
 }
 

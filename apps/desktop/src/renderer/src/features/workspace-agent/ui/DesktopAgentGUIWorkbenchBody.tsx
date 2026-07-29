@@ -508,8 +508,35 @@ function DesktopAgentGUISurfaceImpl({
       if (!agentTargetId || !defaults) {
         return;
       }
-      return desktopPreferencesService
-        .rememberAgentComposerDefaultsForAgentTarget(agentTargetId, defaults)
+      const { modelParameters, ...scalarDefaults } = defaults;
+      const scalarPromise =
+        Object.keys(scalarDefaults).length > 0
+          ? desktopPreferencesService.rememberAgentComposerDefaultsForAgentTarget(
+              agentTargetId,
+              scalarDefaults
+            )
+          : Promise.resolve({
+              acknowledgedFields: [],
+              supersededFields: []
+            });
+      const modelParametersPromise = modelParameters
+        ? desktopPreferencesService
+            .rememberAgentModelParametersForAgentTarget(
+              agentTargetId,
+              modelParameters
+            )
+            .then(() => true)
+        : Promise.resolve(false);
+      return Promise.all([scalarPromise, modelParametersPromise])
+        .then(([scalarResult, modelParametersAcknowledged]) => ({
+          acknowledgedFields: [
+            ...scalarResult.acknowledgedFields,
+            ...(modelParametersAcknowledged
+              ? (["modelParameters"] as const)
+              : [])
+          ],
+          supersededFields: scalarResult.supersededFields
+        }))
         .catch((error) => {
           logAgentComposerDefaultsDiagnostic({
             agentTargetId,

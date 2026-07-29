@@ -1,40 +1,157 @@
 package agent
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
 	agenthost "github.com/tutti-os/tutti/packages/agent/host"
 	"github.com/tutti-os/tutti/services/tuttid/biz/agentprovider"
 )
 
+func (s *Service) applyRememberedCursorWireModelParameters(
+	ctx context.Context,
+	agentTargetID string,
+	current ComposerSettings,
+	patch agenthost.ComposerSettingsPatch,
+) (agenthost.ComposerSettingsPatch, error) {
+	if patch.Model == nil || s == nil || s.AgentComposerDefaultsReader == nil {
+		return patch, nil
+	}
+	selectedModel := strings.TrimSpace(*patch.Model)
+	selectedBaseModelID := parameterizedModelBaseID(selectedModel)
+	if selectedBaseModelID == "" || selectedBaseModelID == parameterizedModelBaseID(current.Model) {
+		return patch, nil
+	}
+	defaults, err := s.AgentComposerDefaultsReader.GetAgentComposerDefaultsForTarget(ctx, strings.TrimSpace(agentTargetID))
+	if err != nil {
+		return patch, err
+	}
+	remembered := defaults.ModelParametersByBaseModel[selectedBaseModelID]
+	if len(remembered) == 0 {
+		return patch, nil
+	}
+	if patch.ModelParameters == nil {
+		patch.ModelParameters = map[string]*string{}
+	}
+	for parameterID, selected := range remembered {
+		parameterID = strings.TrimSpace(parameterID)
+		selected = strings.TrimSpace(selected)
+		if parameterID == "" || selected == "" {
+			continue
+		}
+		if _, explicitlyPatched := patch.ModelParameters[parameterID]; explicitlyPatched {
+			continue
+		}
+		value := selected
+		patch.ModelParameters[parameterID] = &value
+	}
+	return patch, nil
+}
+
+func (s *Service) validateCursorWireComposerSettingsPatch(
+	agentSessionID string,
+	runtimeContext map[string]any,
+	current ComposerSettings,
+	patch agenthost.ComposerSettingsPatch,
+) error {
+	selectedModel := strings.TrimSpace(current.Model)
+	if patch.Model != nil {
+		selectedModel = strings.TrimSpace(*patch.Model)
+	}
+	if selectedModel == "" {
+		return nil
+	}
+	profiles := projectCursorWireModelParameterProfiles(
+		[]ComposerConfigOptionValue{{ID: selectedModel, Label: selectedModel, Value: selectedModel}},
+		selectedModel,
+		current.ModelParameters,
+		current.Speed,
+		extractACPModelParameterProfiles(runtimeContext),
+		s.cursorWireRejections().snapshot(agentSessionID),
+	)
+	var selectedProfile *ComposerModelParameterProfile
+	for index := range profiles {
+		if strings.TrimSpace(profiles[index].ModelID) == selectedModel {
+			selectedProfile = &profiles[index]
+			break
+		}
+	}
+	findParameter := func(id, semantic string) *ComposerModelParameterCapability {
+		if selectedProfile == nil {
+			return nil
+		}
+		for index := range selectedProfile.Parameters {
+			parameter := &selectedProfile.Parameters[index]
+			if strings.TrimSpace(parameter.ID) == id ||
+				(semantic != "" && strings.TrimSpace(parameter.Semantic) == semantic) {
+				return parameter
+			}
+		}
+		return nil
+	}
+	validateSelection := func(parameterID, semantic, selected string) error {
+		parameter := findParameter(parameterID, semantic)
+		if parameter == nil || !parameter.Configurable ||
+			parameter.Availability != ComposerModelParameterAvailabilitySupported {
+			return fmt.Errorf("%w: model parameter %q is not configurable for %q", agenthost.ErrInvalidArgument, parameterID, selectedModel)
+		}
+		for _, option := range parameter.Options {
+			if strings.TrimSpace(option.Value) == selected {
+				return nil
+			}
+		}
+		return fmt.Errorf("%w: model parameter %q does not support value %q for %q", agenthost.ErrInvalidArgument, parameterID, selected, selectedModel)
+	}
+	for parameterID, value := range patch.ModelParameters {
+		parameterID = strings.TrimSpace(parameterID)
+		if value == nil {
+			continue
+		}
+		selected := strings.TrimSpace(*value)
+		if parameterID == "" || selected == "" {
+			return fmt.Errorf("%w: model parameter id and value are required", agenthost.ErrInvalidArgument)
+		}
+		semantic := ""
+		switch parameterID {
+		case ComposerModelParameterSemanticContext, ComposerModelParameterSemanticReasoning, ComposerModelParameterSemanticSpeed:
+			semantic = parameterID
+		}
+		if semantic == ComposerModelParameterSemanticSpeed {
+			return fmt.Errorf("%w: Fast must be updated through the target-global speed setting", agenthost.ErrInvalidArgument)
+		}
+		if err := validateSelection(parameterID, semantic, selected); err != nil {
+			return err
+		}
+	}
+	if patch.Speed != nil {
+		selected := strings.TrimSpace(*patch.Speed)
+		if selected != "" && selected != strings.TrimSpace(current.Speed) {
+			if err := validateSelection(ComposerModelParameterSemanticSpeed, ComposerModelParameterSemanticSpeed, selected); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (s *Service) applyCursorWireModelParameterProfiles(
 	input ComposerOptionsInput,
 	options ComposerOptions,
 ) ComposerOptions {
-	rejected := s.cursorWireRejectionsForComposerOptions(input)
-	acpProfiles := extractACPModelParameterProfiles(options.RuntimeContext)
-	profiles := projectCursorWireModelParameterProfiles(
-		options.ModelConfig.Options,
-		options.EffectiveSettings.Model,
-		options.EffectiveSettings.ModelParameters,
-		options.EffectiveSettings.Speed,
-		acpProfiles,
-		rejected,
-	)
-	options.ModelParameterProfiles = profiles
 	if model := strings.TrimSpace(options.EffectiveSettings.Model); model != "" {
 		extracted := extractCursorWireModelParameters(model)
 		options.EffectiveSettings.ModelParameters = mergeCursorWireModelParameters(
-			options.EffectiveSettings.ModelParameters,
 			extracted,
+			options.EffectiveSettings.ModelParameters,
 		)
-		if options.EffectiveSettings.Speed == "" {
-			if speed := strings.TrimSpace(extracted[ComposerModelParameterSemanticSpeed]); speed != "" {
-				options.EffectiveSettings.Speed = speed
-			}
+		if strings.TrimSpace(input.Settings.Speed) == "" {
+			options.EffectiveSettings.Speed = extractCursorWireSpeed(model)
 		}
 		// Best-effort apply remembered/target speed onto the selectable model
-		// id for presentation without inventing Auto fast defaults.
+		// id for presentation without inventing Auto fast defaults. Rewrite
+		// before profile projection so the effective profile has the exact id
+		// consumed by the provider-neutral GUI.
 		if !isAutoParameterizedModelID(model) {
 			rewritten := rewriteCursorWireModelID(
 				model,
@@ -47,6 +164,17 @@ func (s *Service) applyCursorWireModelParameterProfiles(
 			}
 		}
 	}
+	rejected := s.cursorWireRejectionsForComposerOptions(input)
+	acpProfiles := extractACPModelParameterProfiles(options.RuntimeContext)
+	profiles := projectCursorWireModelParameterProfiles(
+		options.ModelConfig.Options,
+		options.EffectiveSettings.Model,
+		options.EffectiveSettings.ModelParameters,
+		options.EffectiveSettings.Speed,
+		acpProfiles,
+		rejected,
+	)
+	options.ModelParameterProfiles = profiles
 	return options
 }
 
@@ -253,11 +381,19 @@ func applyCursorWireComposerSettings(settings ComposerSettings) ComposerSettings
 	if settings.Model == "" {
 		return settings
 	}
+	fastSupported := cursorWireFastSupported(
+		settings.Model,
+		parameterizedModelBaseID(settings.Model),
+		false,
+	)
+	if !fastSupported {
+		settings.Speed = ""
+	}
 	extracted := extractCursorWireModelParameters(settings.Model)
 	settings.ModelParameters = mergeCursorWireModelParameters(extracted, settings.ModelParameters)
 	settings.Model = rewriteCursorWireModelID(settings.Model, settings.ModelParameters, settings.Speed)
-	if settings.Speed == "" {
-		settings.Speed = strings.TrimSpace(settings.ModelParameters[ComposerModelParameterSemanticSpeed])
+	if fastSupported && settings.Speed == "" {
+		settings.Speed = extractCursorWireSpeed(settings.Model)
 	}
 	settings.ModelParameters = extractCursorWireModelParameters(settings.Model)
 	return settings
@@ -271,7 +407,11 @@ func applyCursorWireComposerSettingsPatch(
 	if patch.Model != nil {
 		next.Model = strings.TrimSpace(*patch.Model)
 	}
-	next.ModelParameters = cloneStringValues(current.ModelParameters)
+	if parameterizedModelBaseID(next.Model) != parameterizedModelBaseID(current.Model) {
+		next.ModelParameters = extractCursorWireModelParameters(next.Model)
+	} else {
+		next.ModelParameters = cloneStringValues(current.ModelParameters)
+	}
 	for key, value := range patch.ModelParameters {
 		if strings.TrimSpace(key) == "" {
 			continue
@@ -303,8 +443,8 @@ func applyCursorWireComposerSettingsPatch(
 		}
 	}
 	patch.ModelParameters = parameterPatch
-	if rewritten.Speed != "" {
-		speed := rewritten.Speed
+	if rewritten.Speed != "" || current.Speed != "" || patch.Speed != nil {
+		speed := strings.TrimSpace(rewritten.Speed)
 		patch.Speed = &speed
 	}
 	return patch

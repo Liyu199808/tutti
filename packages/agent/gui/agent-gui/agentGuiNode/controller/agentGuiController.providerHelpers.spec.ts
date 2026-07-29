@@ -4,6 +4,7 @@ import type {
   AgentActivitySnapshot
 } from "@tutti-os/agent-activity-core";
 import {
+  composerDefaultsPatchFromSettings,
   composerOptionsForTarget,
   composerOptionsLoadingForTarget,
   ownerDeviceLabelForConversation,
@@ -17,6 +18,31 @@ import type { AgentGUIConversationSummary } from "../model/agentGuiConversationM
 const target = {
   agentTargetId: "target-1"
 } as AgentGUIComposerTargetData;
+
+describe("composer defaults model parameters", () => {
+  it("binds model-scoped memories to the daemon-projected base model", () => {
+    const model = "gpt-5.5[context=1m,reasoning=high]";
+    expect(
+      composerDefaultsPatchFromSettings(
+        { modelParameters: { context: "1m", reasoning: "high" } },
+        {
+          model,
+          modelParameters: { context: "1m", reasoning: "high" }
+        },
+        {
+          modelParameterProfiles: [
+            { modelId: model, baseModelId: "gpt-5.5", parameters: [] }
+          ]
+        } as unknown as AgentActivityComposerOptions
+      )
+    ).toEqual({
+      modelParameters: {
+        baseModelId: "gpt-5.5",
+        values: { context: "1m", reasoning: "high" }
+      }
+    });
+  });
+});
 
 describe("composer options target state", () => {
   it("reports loading only before the target has cached options", () => {

@@ -76,6 +76,7 @@ export {
   type DesktopAgentComposerDefaultsByAgentTarget,
   type DesktopAgentComposerDefaultsByProvider,
   type DesktopAgentComposerDefaultsPatch,
+  type DesktopAgentComposerDefaultsField,
   type DesktopAgentModelParametersPatch,
   type DesktopAgentGuiConversationRailCollapsedByProvider,
   type DesktopAgentProvider,

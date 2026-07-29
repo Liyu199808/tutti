@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"sort"
 	"strings"
 )
 
@@ -99,7 +100,14 @@ func (p parameterizedModelID) With(updates map[string]*string) parameterizedMode
 		return p.clone()
 	}
 	next := p.clone()
-	for key, value := range updates {
+	keys := make([]string, 0, len(updates))
+	for key := range updates {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, rawKey := range keys {
+		key := rawKey
+		value := updates[rawKey]
 		key = strings.TrimSpace(key)
 		if key == "" || value == nil {
 			continue

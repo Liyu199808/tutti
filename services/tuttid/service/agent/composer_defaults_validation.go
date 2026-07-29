@@ -134,7 +134,9 @@ func (s *Service) ValidateAgentModelParametersPatch(
 				break
 			}
 		}
-		if capability == nil || !capability.Configurable || strings.TrimSpace(capability.Availability) != "supported" {
+		if capability == nil || !capability.Configurable ||
+			strings.TrimSpace(capability.Availability) != ComposerModelParameterAvailabilitySupported ||
+			strings.TrimSpace(capability.PreferenceScope) != ComposerModelParameterPreferenceScopeBaseModel {
 			return fmt.Errorf("%w: model parameter %s is not configurable", ErrInvalidArgument, parameterID)
 		}
 		matched := false

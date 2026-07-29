@@ -100,6 +100,59 @@ describe("AgentModelReasoningDropdown", () => {
     ).toBe('["gpt-5.4"]');
     expect(screen.getByText("Model selection")).toBeInTheDocument();
   });
+
+  it("renders Context and routes Fast through speed", async () => {
+    const onSettingsChange = vi.fn();
+    render(
+      <AgentModelReasoningDropdown
+        composerSettings={{
+          ...composerModelSettings(),
+          draftSettings: {
+            ...composerModelSettings().draftSettings,
+            modelParameters: { context: "200k" }
+          },
+          modelParameters: [
+            {
+              id: "context",
+              baseModelId: "gpt-5.5",
+              semantic: "context",
+              preferenceScope: "baseModel",
+              availability: "supported",
+              label: "Context",
+              currentValue: "200k",
+              configurable: true,
+              options: [
+                { label: "200K", value: "200k" },
+                { label: "1M", value: "1m" }
+              ]
+            },
+            {
+              id: "speed",
+              baseModelId: "gpt-5.5",
+              semantic: "speed",
+              preferenceScope: "agentTarget",
+              availability: "supported",
+              label: "Fast",
+              currentValue: "standard",
+              configurable: true,
+              options: []
+            }
+          ]
+        }}
+        labels={modelSettingsLabels}
+        onSettingsChange={onSettingsChange}
+      />
+    );
+
+    fireEvent.pointerDown(
+      screen.getByRole("button", { name: "Model / Reasoning" }),
+      { button: 0, ctrlKey: false, pointerType: "mouse" }
+    );
+
+    expect(screen.getByText("Context")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("switch", { name: "Speed" }));
+    expect(onSettingsChange).toHaveBeenCalledWith({ speed: "fast" });
+  });
 });
 
 describe("AgentPermissionModeDropdown", () => {

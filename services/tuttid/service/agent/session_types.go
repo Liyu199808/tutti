@@ -69,6 +69,8 @@ type Service struct {
 	CapabilityLister               ComposerCapabilityLister
 	ExtensionComposerProfiles      ExtensionComposerProfileResolver
 	AgentComposerDefaultsReader    AgentComposerDefaultsReader
+	PersistAgentComposerDefaults   func(context.Context, string, preferencesbiz.AgentComposerDefaultsPatch) error
+	PersistAgentModelParameters    func(context.Context, string, string, preferencesbiz.AgentModelParametersPatch) error
 	ProviderAvailabilityCacheTTL   time.Duration
 	CapabilityCatalogCacheTTL      time.Duration
 	LiveModelCacheTTL              time.Duration
@@ -102,7 +104,8 @@ type Service struct {
 	// cursorWireRejectionCache retains exact ACP-rejected parameterized model
 	// parameter values for the current runtime only so composer-options can
 	// disable them without persisting a false success state.
-	cursorWireRejectionCache *cursorWireRejectionCache
+	cursorWireRejectionCacheOnce sync.Once
+	cursorWireRejectionCache     *cursorWireRejectionCache
 }
 
 type TuttiModeSourceActivity struct {

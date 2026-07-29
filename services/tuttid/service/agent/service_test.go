@@ -4306,11 +4306,14 @@ func TestServiceUpdateSettingsPreservesCodexModelCatalogReasoningEffort(t *testi
 
 func TestServiceUpdateSettingsPersistsModelParametersOnlyAfterRuntimeAcceptance(t *testing.T) {
 	runtime := newFakeRuntime()
-	runtime.updateSettingsErr = errors.New("ACP rejected context")
+	runtime.updateSettingsErr = &agenthost.ProviderError{
+		Message: "ACP rejected context",
+		Cause:   errors.New("account rejected context"),
+	}
 	runtime.sessions["ws-1:session-1"] = ProviderRuntimeSession{
 		ID: "session-1", Provider: "cursor", WorkspaceID: "ws-1", Status: "ready",
 		Settings: &ComposerSettings{
-			Model: "composer-2.5", ModelParameters: map[string]string{"context": "200k", "future": "opaque-current"},
+			Model: "gpt-5.5[context=272k,reasoning=medium]", ModelParameters: map[string]string{"context": "272k", "future": "opaque-current"},
 		},
 	}
 	service := newIsolatedAgentService(runtime)
@@ -4324,13 +4327,96 @@ func TestServiceUpdateSettingsPersistsModelParametersOnlyAfterRuntimeAcceptance(
 		t.Fatalf("UpdateSettings error = %v", err)
 	}
 	persisted, found := service.SessionReader.(*fakeSessionReader).GetSession("ws-1", "session-1")
-	if !found || persisted.Settings.ModelParameters["context"] != "200k" ||
+	if !found || persisted.Settings.ModelParameters["context"] != "272k" ||
 		persisted.Settings.ModelParameters["future"] != "opaque-current" {
 		t.Fatalf("persisted settings after rejection = %#v", persisted.Settings)
 	}
 	live, found := runtime.Session("ws-1", "session-1")
-	if !found || live.Settings == nil || live.Settings.ModelParameters["context"] != "200k" {
+	if !found || live.Settings == nil || live.Settings.ModelParameters["context"] != "272k" {
 		t.Fatalf("live settings after rejection = %#v", live.Settings)
+	}
+}
+
+func TestServiceUpdateSettingsDoesNotClassifyLocalFailureAsACPRejection(t *testing.T) {
+	runtime := newFakeRuntime()
+	runtime.updateSettingsErr = errors.New("runtime transport unavailable")
+	runtime.sessions["ws-1:session-1"] = ProviderRuntimeSession{
+		ID: "session-1", Provider: "cursor", WorkspaceID: "ws-1", Status: "ready",
+		Settings: &ComposerSettings{
+			Model: "gpt-5.5[context=272k,reasoning=medium]",
+		},
+	}
+	service := newIsolatedAgentService(runtime)
+	seedPersistedLiveSettingsSession(service, runtime.sessions["ws-1:session-1"])
+	contextWindow := "1m"
+
+	_, err := service.UpdateSettings(context.Background(), "ws-1", "session-1", ComposerSettingsPatch{
+		ModelParameters: map[string]*string{"context": &contextWindow},
+	})
+	var rejection *ModelParameterRejectionError
+	if err == nil || errors.As(err, &rejection) {
+		t.Fatalf("UpdateSettings error = %#v, want unclassified local error", err)
+	}
+	if got := service.cursorWireRejections().snapshot("session-1"); len(got) != 0 {
+		t.Fatalf("rejection cache = %#v, want empty", got)
+	}
+}
+
+func TestServiceUpdateSettingsRemembersCursorParametersOnlyAfterConfirmation(t *testing.T) {
+	runtime := newFakeRuntime()
+	runtime.sessions["ws-1:session-1"] = ProviderRuntimeSession{
+		ID: "session-1", AgentTargetID: "local:cursor", Provider: "cursor", WorkspaceID: "ws-1", Status: "ready",
+		Settings: &ComposerSettings{
+			Model: "gpt-5.5[context=272k,reasoning=medium,fast=false]",
+			ModelParameters: map[string]string{
+				"context": "272k", "reasoning": "medium",
+			},
+			Speed: "standard",
+		},
+	}
+	service := newIsolatedAgentService(runtime)
+	seedPersistedLiveSettingsSession(service, runtime.sessions["ws-1:session-1"])
+	var rememberedBase string
+	var rememberedParameters preferencesbiz.AgentModelParametersPatch
+	var rememberedSpeed string
+	service.PersistAgentModelParameters = func(
+		_ context.Context,
+		agentTargetID string,
+		baseModelID string,
+		patch preferencesbiz.AgentModelParametersPatch,
+	) error {
+		if agentTargetID != "local:cursor" {
+			t.Fatalf("agent target = %q", agentTargetID)
+		}
+		rememberedBase = baseModelID
+		rememberedParameters = patch
+		return nil
+	}
+	service.PersistAgentComposerDefaults = func(
+		_ context.Context,
+		agentTargetID string,
+		patch preferencesbiz.AgentComposerDefaultsPatch,
+	) error {
+		if agentTargetID != "local:cursor" {
+			t.Fatalf("agent target = %q", agentTargetID)
+		}
+		if value := patch[preferencesbiz.AgentComposerDefaultsFieldSpeed]; value != nil {
+			rememberedSpeed = *value
+		}
+		return nil
+	}
+	contextWindow := "1m"
+	fast := "fast"
+
+	if _, err := service.UpdateSettings(context.Background(), "ws-1", "session-1", ComposerSettingsPatch{
+		ModelParameters: map[string]*string{"context": &contextWindow},
+		Speed:           &fast,
+	}); err != nil {
+		t.Fatalf("UpdateSettings error = %v", err)
+	}
+	if rememberedBase != "gpt-5.5" || rememberedParameters["context"] == nil ||
+		*rememberedParameters["context"] != "1m" || rememberedSpeed != "fast" {
+		t.Fatalf("remembered base=%q parameters=%#v speed=%q", rememberedBase, rememberedParameters, rememberedSpeed)
 	}
 }
 
@@ -7335,7 +7421,7 @@ func seedPersistedLiveSettingsSession(service *Service, session ProviderRuntimeS
 	}
 	service.SessionReader = &fakeSessionReader{sessions: map[string]PersistedSession{
 		session.WorkspaceID + ":" + session.ID: {
-			ID: session.ID, WorkspaceID: session.WorkspaceID, Provider: session.Provider,
+			ID: session.ID, WorkspaceID: session.WorkspaceID, AgentTargetID: session.AgentTargetID, Provider: session.Provider,
 			ProviderSessionID: session.ProviderSessionID, Cwd: session.Cwd,
 			RailSectionKey: "conversations", Settings: settings,
 			CreatedAtUnixMS: 1, UpdatedAtUnixMS: 2, LastEventUnixMS: 2,
@@ -7753,6 +7839,9 @@ func (f *fakeRuntime) UpdateSettings(_ context.Context, input RuntimeUpdateSetti
 	}
 	if input.Settings.ReasoningEffort != nil {
 		settings.ReasoningEffort = strings.TrimSpace(*input.Settings.ReasoningEffort)
+	}
+	if input.Settings.Speed != nil {
+		settings.Speed = strings.TrimSpace(*input.Settings.Speed)
 	}
 	session.Settings = &settings
 	session.UpdatedAtUnixMS = time.Now().UnixMilli()

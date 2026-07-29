@@ -49,6 +49,7 @@ import type {
 } from "../../../workspaceWorkflow";
 import type { TuttiWorkflowDockLabels } from "../TuttiWorkflowDock";
 import type { AgentGUIComposerFooterAccessoryRenderer } from "./AgentGUIComposerFooterAccessory.types";
+import type { AgentGUIModelSettingsLabels } from "./AgentGUIModelSettingsLabels.types";
 
 export type AgentMentionReferenceTargetResolver = (
   item: AgentContextMentionItem
@@ -71,7 +72,7 @@ export interface AgentGUIConversationRailLayout {
   resizing: boolean;
 }
 
-export interface AgentGUIViewLabels {
+export interface AgentGUIViewLabels extends AgentGUIModelSettingsLabels {
   initialPlaceholder: string;
   followupPlaceholder: string;
   installRequiredPlaceholder: string;
@@ -96,29 +97,6 @@ export interface AgentGUIViewLabels {
   providerGatePendingRefresh: string;
   collaboratorSessionReadOnlyPlaceholder: string;
   send: string;
-  modelLabel: string;
-  modelSelectionLabel: string;
-  modelContextWindowSuffix: string;
-  modelTooltipVersionLabel: string;
-  defaultModel: string;
-  loadingOptions: string;
-  inheritedUnavailable: string;
-  reasoningLabel: string;
-  reasoningDegreeLabel: string;
-  reasoningOptionDefault: string;
-  reasoningOptionMinimal: string;
-  reasoningOptionLow: string;
-  reasoningOptionMedium: string;
-  reasoningOptionHigh: string;
-  reasoningOptionXHigh: string;
-  reasoningOptionMax: string;
-  reasoningOptionUltra: string;
-  speedLabel: string;
-  speedSelectionLabel: string;
-  speedOptionStandard: string;
-  speedOptionStandardDescription: string;
-  speedOptionFast: string;
-  speedOptionFastDescription: string;
   permissionLabel: string;
   permissionModeReadOnly: string;
   permissionModeAuto: string;

@@ -1012,7 +1012,9 @@ parameterized model ids. A profile with a verified current value but no
 candidate range is display-only. Live changes are next-request settings and
 remain pending until `UpdateSettings` returns the runtime-confirmed Session;
 provider rejection restores the authoritative value rather than displaying
-optimistic success.
+optimistic success. The host integration persists active-session Context and
+reasoning memory, plus the target-global Fast preference, only after that
+confirmation; the AgentGUI package does not own a second optimistic store.
 
 Trusted host/daemon code resolves a target-backed request through `agent_targets`, then derives provider and runtime reference. If a client supplies both target and provider, daemon rejects a mismatch.
 

@@ -23,6 +23,21 @@ func TestParameterizedModelIDRoundTripPreservesUnknownParams(t *testing.T) {
 	}
 }
 
+func TestParameterizedModelIDAppendsNewParametersDeterministically(t *testing.T) {
+	t.Parallel()
+	contextWindow := "1m"
+	reasoning := "high"
+	for range 100 {
+		got := parseParameterizedModelID("gpt-5.5").With(map[string]*string{
+			"reasoning": &reasoning,
+			"context":   &contextWindow,
+		}).Format()
+		if got != "gpt-5.5[context=1m,reasoning=high]" {
+			t.Fatalf("deterministic model id = %q", got)
+		}
+	}
+}
+
 func TestRewriteCursorWireModelIDFamiliesAndAuto(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -195,6 +210,21 @@ func TestCursorWireRuntimeRejectionDisablesExactValue(t *testing.T) {
 	}
 }
 
+func TestValidateCursorWireComposerSettingsPatchRejectsUnknownFamilyMutation(t *testing.T) {
+	t.Parallel()
+	service := newIsolatedAgentService(newFakeRuntime())
+	contextWindow := "200k"
+	err := service.validateCursorWireComposerSettingsPatch(
+		"session-1",
+		nil,
+		ComposerSettings{Model: "gemini-3-pro[context=1m]"},
+		ComposerSettingsPatch{ModelParameters: map[string]*string{"context": &contextWindow}},
+	)
+	if !errors.Is(err, ErrInvalidArgument) {
+		t.Fatalf("validation error = %v, want ErrInvalidArgument", err)
+	}
+}
+
 func TestCursorWireRejectionErrorCachesEvidence(t *testing.T) {
 	t.Parallel()
 	cache := &cursorWireRejectionCache{}
@@ -232,6 +262,72 @@ func TestApplyCursorWireComposerSettingsPatchRewritesModel(t *testing.T) {
 	if patch.ModelParameters["reasoning"] == nil || *patch.ModelParameters["reasoning"] != "xhigh" {
 		t.Fatalf("reasoning parameter = %#v", patch.ModelParameters)
 	}
+}
+
+func TestApplyCursorWireComposerSettingsPatchDoesNotCarryParametersAcrossBaseModels(t *testing.T) {
+	t.Parallel()
+	model := "claude-sonnet-5[thinking=true,context=300k,effort=medium]"
+	patch := applyCursorWireComposerSettingsPatch(
+		ComposerSettings{
+			Model: "gpt-5.5[context=1m,reasoning=high]",
+			ModelParameters: map[string]string{
+				"context": "1m", "reasoning": "high",
+			},
+		},
+		ComposerSettingsPatch{Model: &model},
+	)
+	if patch.Model == nil || *patch.Model != model {
+		t.Fatalf("model patch = %#v", patch.Model)
+	}
+	if patch.ModelParameters["context"] == nil || *patch.ModelParameters["context"] != "300k" ||
+		patch.ModelParameters["reasoning"] == nil || *patch.ModelParameters["reasoning"] != "medium" {
+		t.Fatalf("target model parameters = %#v", patch.ModelParameters)
+	}
+}
+
+func TestApplyCursorWireComposerSettingsClearsUnsupportedFast(t *testing.T) {
+	t.Parallel()
+	settings := applyCursorWireComposerSettings(ComposerSettings{
+		Model: "default[]",
+		Speed: "fast",
+	})
+	if settings.Speed != "" || settings.Model != "default[]" {
+		t.Fatalf("settings = %#v, want Auto without an unverified Fast state", settings)
+	}
+
+	model := "default[]"
+	patch := applyCursorWireComposerSettingsPatch(
+		ComposerSettings{Model: "composer-2.5[fast=true]", Speed: "fast"},
+		ComposerSettingsPatch{Model: &model},
+	)
+	if patch.Speed == nil || *patch.Speed != "" {
+		t.Fatalf("speed patch = %#v, want an explicit clear", patch.Speed)
+	}
+}
+
+func TestCursorWireComposerOptionsProfileMatchesRewrittenEffectiveModel(t *testing.T) {
+	t.Parallel()
+	service := newIsolatedAgentService(newFakeRuntime())
+	options := service.applyCursorWireModelParameterProfiles(
+		ComposerOptionsInput{WorkspaceID: "ws-1", Provider: "cursor", Settings: ComposerSettings{Speed: "fast"}},
+		ComposerOptions{
+			ModelConfig: ComposerConfigOption{Options: []ComposerConfigOptionValue{{
+				Value: "gpt-5.5[context=272k,reasoning=medium,fast=false]",
+			}}},
+			EffectiveSettings: ComposerSettings{
+				Model: "gpt-5.5[context=272k,reasoning=medium,fast=false]",
+				ModelParameters: map[string]string{
+					"context": "1m", "reasoning": "high",
+				},
+				Speed: "fast",
+			},
+		},
+	)
+	wantModel := "gpt-5.5[context=1m,reasoning=high,fast=true]"
+	if options.EffectiveSettings.Model != wantModel {
+		t.Fatalf("effective model = %q, want %q", options.EffectiveSettings.Model, wantModel)
+	}
+	findProfile(t, options.ModelParameterProfiles, wantModel)
 }
 
 func TestGetComposerOptionsProjectsCursorWireProfiles(t *testing.T) {

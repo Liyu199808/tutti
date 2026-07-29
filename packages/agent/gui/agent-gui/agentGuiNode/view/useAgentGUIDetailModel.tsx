@@ -378,6 +378,7 @@ export function useAgentGUIDetailModel(input: Input) {
       modelLabel: labels.modelLabel,
       modelSelectionLabel: labels.modelSelectionLabel,
       modelContextWindowSuffix: labels.modelContextWindowSuffix,
+      contextLabel: labels.contextLabel,
       modelTooltipVersionLabel: labels.modelTooltipVersionLabel,
       defaultModel: labels.defaultModel,
       loadingOptions: labels.loadingOptions,

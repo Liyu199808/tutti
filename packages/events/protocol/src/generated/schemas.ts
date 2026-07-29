@@ -44,6 +44,15 @@ export const preferencesDesktopPreferencesSchema = {
             model: {
               type: "string"
             },
+            modelParametersByBaseModel: {
+              type: "object",
+              additionalProperties: {
+                type: "object",
+                additionalProperties: {
+                  type: "string"
+                }
+              }
+            },
             permissionModeId: {
               type: "string"
             },
@@ -61,6 +70,15 @@ export const preferencesDesktopPreferencesSchema = {
           properties: {
             model: {
               type: "string"
+            },
+            modelParametersByBaseModel: {
+              type: "object",
+              additionalProperties: {
+                type: "object",
+                additionalProperties: {
+                  type: "string"
+                }
+              }
             },
             permissionModeId: {
               type: "string"
@@ -80,6 +98,15 @@ export const preferencesDesktopPreferencesSchema = {
             model: {
               type: "string"
             },
+            modelParametersByBaseModel: {
+              type: "object",
+              additionalProperties: {
+                type: "object",
+                additionalProperties: {
+                  type: "string"
+                }
+              }
+            },
             permissionModeId: {
               type: "string"
             },
@@ -97,6 +124,15 @@ export const preferencesDesktopPreferencesSchema = {
           properties: {
             model: {
               type: "string"
+            },
+            modelParametersByBaseModel: {
+              type: "object",
+              additionalProperties: {
+                type: "object",
+                additionalProperties: {
+                  type: "string"
+                }
+              }
             },
             permissionModeId: {
               type: "string"
@@ -116,6 +152,15 @@ export const preferencesDesktopPreferencesSchema = {
             model: {
               type: "string"
             },
+            modelParametersByBaseModel: {
+              type: "object",
+              additionalProperties: {
+                type: "object",
+                additionalProperties: {
+                  type: "string"
+                }
+              }
+            },
             permissionModeId: {
               type: "string"
             },
@@ -134,6 +179,15 @@ export const preferencesDesktopPreferencesSchema = {
             model: {
               type: "string"
             },
+            modelParametersByBaseModel: {
+              type: "object",
+              additionalProperties: {
+                type: "object",
+                additionalProperties: {
+                  type: "string"
+                }
+              }
+            },
             permissionModeId: {
               type: "string"
             },
@@ -151,6 +205,15 @@ export const preferencesDesktopPreferencesSchema = {
           properties: {
             model: {
               type: "string"
+            },
+            modelParametersByBaseModel: {
+              type: "object",
+              additionalProperties: {
+                type: "object",
+                additionalProperties: {
+                  type: "string"
+                }
+              }
             },
             permissionModeId: {
               type: "string"
@@ -173,6 +236,15 @@ export const preferencesDesktopPreferencesSchema = {
         properties: {
           model: {
             type: "string"
+          },
+          modelParametersByBaseModel: {
+            type: "object",
+            additionalProperties: {
+              type: "object",
+              additionalProperties: {
+                type: "string"
+              }
+            }
           },
           permissionModeId: {
             type: "string"
@@ -323,6 +395,15 @@ export const preferencesDesktopPreferencesSchema = {
       properties: {
         model: {
           type: "string"
+        },
+        modelParametersByBaseModel: {
+          type: "object",
+          additionalProperties: {
+            type: "object",
+            additionalProperties: {
+              type: "string"
+            }
+          }
         },
         permissionModeId: {
           type: "string"
@@ -1655,41 +1736,52 @@ export const preferencesAgentComposerDefaultsPatchRequestedPayloadSchema = {
       maxLength: 128
     },
     patch: {
-      type: "object",
-      additionalProperties: false,
-      minProperties: 1,
-      properties: {
-        model: {
-          type: ["string", "null"]
-        },
-        permissionModeId: {
-          type: ["string", "null"]
-        },
-        reasoningEffort: {
-          type: ["string", "null"]
-        },
-        speed: {
-          type: ["string", "null"]
-        },
-        modelParameters: {
+      oneOf: [
+        {
           type: "object",
           additionalProperties: false,
-          required: ["baseModelId", "values"],
+          minProperties: 1,
           properties: {
-            baseModelId: {
-              type: "string",
-              minLength: 1
+            model: {
+              type: ["string", "null"]
             },
-            values: {
+            permissionModeId: {
+              type: ["string", "null"]
+            },
+            reasoningEffort: {
+              type: ["string", "null"]
+            },
+            speed: {
+              type: ["string", "null"]
+            }
+          }
+        },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["modelParameters"],
+          properties: {
+            modelParameters: {
               type: "object",
-              minProperties: 1,
-              additionalProperties: {
-                type: ["string", "null"]
+              additionalProperties: false,
+              required: ["baseModelId", "values"],
+              properties: {
+                baseModelId: {
+                  type: "string",
+                  minLength: 1
+                },
+                values: {
+                  type: "object",
+                  minProperties: 1,
+                  additionalProperties: {
+                    type: ["string", "null"]
+                  }
+                }
               }
             }
           }
         }
-      }
+      ]
     },
     clientMutationId: {
       type: "string",
@@ -1748,6 +1840,15 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
                 model: {
                   type: "string"
                 },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
+                },
                 permissionModeId: {
                   type: "string"
                 },
@@ -1765,6 +1866,15 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
               properties: {
                 model: {
                   type: "string"
+                },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
                 },
                 permissionModeId: {
                   type: "string"
@@ -1784,6 +1894,15 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
                 model: {
                   type: "string"
                 },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
+                },
                 permissionModeId: {
                   type: "string"
                 },
@@ -1801,6 +1920,15 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
               properties: {
                 model: {
                   type: "string"
+                },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
                 },
                 permissionModeId: {
                   type: "string"
@@ -1820,6 +1948,15 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
                 model: {
                   type: "string"
                 },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
+                },
                 permissionModeId: {
                   type: "string"
                 },
@@ -1838,6 +1975,15 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
                 model: {
                   type: "string"
                 },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
+                },
                 permissionModeId: {
                   type: "string"
                 },
@@ -1855,6 +2001,15 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
               properties: {
                 model: {
                   type: "string"
+                },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
                 },
                 permissionModeId: {
                   type: "string"
@@ -1877,6 +2032,15 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
             properties: {
               model: {
                 type: "string"
+              },
+              modelParametersByBaseModel: {
+                type: "object",
+                additionalProperties: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "string"
+                  }
+                }
               },
               permissionModeId: {
                 type: "string"
@@ -2027,6 +2191,15 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
           properties: {
             model: {
               type: "string"
+            },
+            modelParametersByBaseModel: {
+              type: "object",
+              additionalProperties: {
+                type: "object",
+                additionalProperties: {
+                  type: "string"
+                }
+              }
             },
             permissionModeId: {
               type: "string"
@@ -2096,6 +2269,15 @@ export const preferencesDesktopUpdatedPayloadSchema = {
                 model: {
                   type: "string"
                 },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
+                },
                 permissionModeId: {
                   type: "string"
                 },
@@ -2113,6 +2295,15 @@ export const preferencesDesktopUpdatedPayloadSchema = {
               properties: {
                 model: {
                   type: "string"
+                },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
                 },
                 permissionModeId: {
                   type: "string"
@@ -2132,6 +2323,15 @@ export const preferencesDesktopUpdatedPayloadSchema = {
                 model: {
                   type: "string"
                 },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
+                },
                 permissionModeId: {
                   type: "string"
                 },
@@ -2149,6 +2349,15 @@ export const preferencesDesktopUpdatedPayloadSchema = {
               properties: {
                 model: {
                   type: "string"
+                },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
                 },
                 permissionModeId: {
                   type: "string"
@@ -2168,6 +2377,15 @@ export const preferencesDesktopUpdatedPayloadSchema = {
                 model: {
                   type: "string"
                 },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
+                },
                 permissionModeId: {
                   type: "string"
                 },
@@ -2186,6 +2404,15 @@ export const preferencesDesktopUpdatedPayloadSchema = {
                 model: {
                   type: "string"
                 },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
+                },
                 permissionModeId: {
                   type: "string"
                 },
@@ -2203,6 +2430,15 @@ export const preferencesDesktopUpdatedPayloadSchema = {
               properties: {
                 model: {
                   type: "string"
+                },
+                modelParametersByBaseModel: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "string"
+                    }
+                  }
                 },
                 permissionModeId: {
                   type: "string"
@@ -2225,6 +2461,15 @@ export const preferencesDesktopUpdatedPayloadSchema = {
             properties: {
               model: {
                 type: "string"
+              },
+              modelParametersByBaseModel: {
+                type: "object",
+                additionalProperties: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "string"
+                  }
+                }
               },
               permissionModeId: {
                 type: "string"
@@ -2375,6 +2620,15 @@ export const preferencesDesktopUpdatedPayloadSchema = {
           properties: {
             model: {
               type: "string"
+            },
+            modelParametersByBaseModel: {
+              type: "object",
+              additionalProperties: {
+                type: "object",
+                additionalProperties: {
+                  type: "string"
+                }
+              }
             },
             permissionModeId: {
               type: "string"

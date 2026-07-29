@@ -39,6 +39,7 @@ import {
   desktopWorkbenchShortcutsEqual,
   desktopWorkbenchWindowSnappingEqual,
   type DesktopAgentComposerDefaultsPatch,
+  type DesktopAgentModelParametersPatch,
   type DesktopAgentComposerDefaultsByAgentTarget,
   type DesktopAgentComposerDefaultsByProvider,
   type DesktopAgentGuiConversationRailCollapsedByProvider,
@@ -707,6 +708,17 @@ export class DesktopPreferencesService implements IDesktopPreferencesService {
       agentTargetId,
       defaults
     );
+  }
+
+  async rememberAgentModelParametersForAgentTarget(
+    agentTargetId: string,
+    patch: DesktopAgentModelParametersPatch
+  ): Promise<void> {
+    await this.dependencies.client.patchAgentComposerDefaultsForTarget({
+      agentTargetId,
+      clientMutationId: crypto.randomUUID(),
+      patch: { modelParameters: patch }
+    });
   }
 
   async rememberAgentGuiConversationRailCollapsed(

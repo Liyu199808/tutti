@@ -22,7 +22,7 @@ const (
 
 // resolveComposerModelParameterProfiles merges already-decoded capability
 // candidates without knowing a provider identity. Resolution is per exact
-// model and parameter id. Structured ACP metadata always wins; explicit exact
+// model and semantic parameter role. Structured ACP metadata always wins; explicit exact
 // model presets beat family presets; a verifiable value parsed from a
 // parameterized model id is retained only when no richer capability exists.
 func resolveComposerModelParameterProfiles(
@@ -70,14 +70,15 @@ func resolveComposerModelParameterProfiles(
 					continue
 				}
 				priority := composerModelParameterSourcePriority(parameter.Source)
-				current, found := profile.parameters[parameter.ID]
+				selectionKey := parameter.Semantic
+				current, found := profile.parameters[selectionKey]
 				if found && current.priority >= priority {
 					continue
 				}
 				parameter.Options = cloneComposerConfigOptionValues(parameter.Options)
-				profile.parameters[parameter.ID] = selectedParameter{capability: parameter, priority: priority}
+				profile.parameters[selectionKey] = selectedParameter{capability: parameter, priority: priority}
 				if !found {
-					profile.parameterIDs = append(profile.parameterIDs, parameter.ID)
+					profile.parameterIDs = append(profile.parameterIDs, selectionKey)
 				}
 				if priority > profile.basePriority {
 					profile.baseModelID = baseModelID

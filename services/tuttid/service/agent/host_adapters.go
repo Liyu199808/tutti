@@ -137,7 +137,7 @@ func (p serviceHostSettingsPolicy) NormalizeRuntimeSettingsPatch(
 	}
 	if settings.Speed != nil {
 		normalized := strings.TrimSpace(*settings.Speed)
-		if agentprovider.Normalize(provider) != "" {
+		if agentprovider.Normalize(provider) != "" && !composerUsesCursorWireParameterizedModels(provider) {
 			normalized = normalizeSpeedForProvider(provider, normalized)
 		}
 		settings.Speed = &normalized

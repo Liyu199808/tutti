@@ -22,6 +22,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  Switch,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -111,6 +112,7 @@ export function AgentModelReasoningDropdown({
     composerSettings.isSettingsLoading;
   const applySettingsChange = (patch: {
     model?: string;
+    modelParameters?: Record<string, string>;
     reasoningEffort?: string;
     speed?: string;
   }): void => {
@@ -138,6 +140,9 @@ export function AgentModelReasoningDropdown({
     );
   };
   const favoriteValueSet = new Set(menu.model.favoriteValues);
+  const hasModelSpeedParameter = (composerSettings.modelParameters ?? []).some(
+    (parameter) => parameter.semantic === "speed"
+  );
   const modelDescriptionPresentation = menu.model.optionDescriptionInline
     ? ("inline" as const)
     : ("model-tooltip" as const);
@@ -161,7 +166,7 @@ export function AgentModelReasoningDropdown({
       data-agent-model-reasoning-trigger="true"
     >
       <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-        {menu.speed.show && menu.trigger.isFast ? (
+        {(menu.speed.show || hasModelSpeedParameter) && menu.trigger.isFast ? (
           <ZapIcon
             aria-hidden
             className="size-3.5 shrink-0"
@@ -335,48 +340,106 @@ export function AgentModelReasoningDropdown({
             ) : null}
           </>
         ) : null}
-        {menu.model.show && (menu.reasoning.show || menu.speed.show) ? (
+        {menu.model.show &&
+        ((composerSettings.modelParameters?.length ?? 0) > 0 ||
+          menu.reasoning.show ||
+          menu.speed.show) ? (
           <DropdownMenuSeparator />
         ) : null}
-        {(composerSettings.modelParameters ?? []).map((parameter) => (
-          <DropdownMenuSub key={parameter.id}>
-            <DropdownMenuSubTrigger
-              className={cn(styles.composerMenuItem, "[&>svg]:!ml-0.5")}
-              disabled={!parameter.configurable}
-              data-agent-model-parameter-submenu-trigger={parameter.id}
+        {(composerSettings.modelParameters ?? []).map((parameter) =>
+          parameter.semantic === "speed" &&
+          parameter.preferenceScope === "agentTarget" ? (
+            <div
+              key={parameter.id}
+              className={cn(
+                styles.composerMenuItem,
+                "flex cursor-default items-center gap-2",
+                !parameter.configurable && "opacity-60"
+              )}
+              data-agent-model-parameter-fast-row="true"
             >
               <span className="min-w-0 flex-1 truncate">
-                {parameter.label === "context"
-                  ? labels.contextLabel
-                  : parameter.label}
+                {modelParameterLabel(
+                  parameter.semantic,
+                  parameter.label,
+                  labels
+                )}
               </span>
               <span className="text-[var(--text-tertiary)]">
-                {parameter.currentValue ?? labels.inheritedUnavailable}
+                {parameter.availability === "unsupported"
+                  ? labels.inheritedUnavailable
+                  : parameter.availability === "unknown"
+                    ? labels.inheritedUnavailable
+                    : parameter.currentValue === "fast"
+                      ? labels.speedOptionFast
+                      : labels.speedOptionStandard}
               </span>
-            </DropdownMenuSubTrigger>
-            {parameter.configurable ? (
-              <DropdownMenuSubContent
-                className={cn(styles.composerMenuContent, "min-w-[132px]")}
+              <Switch
+                size="sm"
+                checked={parameter.currentValue === "fast"}
+                disabled={!parameter.configurable}
+                aria-label={modelParameterLabel(
+                  parameter.semantic,
+                  parameter.label,
+                  labels
+                )}
+                data-agent-model-parameter-fast-switch="true"
+                onCheckedChange={(checked) =>
+                  applySettingsChange({
+                    speed: checked ? "fast" : "standard"
+                  })
+                }
+              />
+            </div>
+          ) : (
+            <DropdownMenuSub key={parameter.id}>
+              <DropdownMenuSubTrigger
+                className={cn(styles.composerMenuItem, "[&>svg]:!ml-0.5")}
+                disabled={!parameter.configurable}
+                data-agent-model-parameter-submenu-trigger={parameter.id}
               >
-                <ComposerMenuOptionItems
-                  options={parameter.options}
-                  selectedValue={parameter.currentValue ?? ""}
-                  tooltipsEnabled
-                  onSelect={(value) =>
-                    applySettingsChange({
-                      modelParameters: {
-                        ...(composerSettings.draftSettings.modelParameters ??
-                          composerSettings.sessionSettings?.modelParameters ??
-                          {}),
-                        [parameter.id]: value
+                <span className="min-w-0 flex-1 truncate">
+                  {modelParameterLabel(
+                    parameter.semantic,
+                    parameter.label,
+                    labels
+                  )}
+                </span>
+                <span className="text-[var(--text-tertiary)]">
+                  {parameter.currentValue ?? labels.inheritedUnavailable}
+                </span>
+              </DropdownMenuSubTrigger>
+              {parameter.configurable ? (
+                <DropdownMenuSubContent
+                  className={cn(styles.composerMenuContent, "min-w-[132px]")}
+                >
+                  <ComposerMenuOptionItems
+                    options={parameter.options}
+                    selectedValue={parameter.currentValue ?? ""}
+                    tooltipsEnabled
+                    onSelect={(value) => {
+                      if (
+                        parameter.semantic === "speed" &&
+                        parameter.preferenceScope === "agentTarget"
+                      ) {
+                        applySettingsChange({ speed: value });
+                        return;
                       }
-                    })
-                  }
-                />
-              </DropdownMenuSubContent>
-            ) : null}
-          </DropdownMenuSub>
-        ))}
+                      applySettingsChange({
+                        modelParameters: {
+                          ...(composerSettings.draftSettings.modelParameters ??
+                            composerSettings.sessionSettings?.modelParameters ??
+                            {}),
+                          [parameter.id]: value
+                        }
+                      });
+                    }}
+                  />
+                </DropdownMenuSubContent>
+              ) : null}
+            </DropdownMenuSub>
+          )
+        )}
         {menu.reasoning.show ? (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger
@@ -446,6 +509,23 @@ export function AgentModelReasoningDropdown({
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+function modelParameterLabel(
+  semantic: string,
+  fallback: string,
+  labels: AgentComposerSettingsMenuLabels
+): string {
+  switch (semantic) {
+    case "context":
+      return labels.contextLabel;
+    case "reasoning":
+      return labels.reasoningLabel;
+    case "speed":
+      return labels.speedLabel;
+    default:
+      return fallback;
+  }
 }
 
 function readComposerLocalStorage(key: string): string | null {

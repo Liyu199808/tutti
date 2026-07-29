@@ -238,7 +238,7 @@ func applyCursorWireEffectiveValues(
 	parameters := append([]ComposerModelParameterCapability(nil), profile.Parameters...)
 	hasSpeed := false
 	for index := range parameters {
-		switch parameters[index].ID {
+		switch parameters[index].Semantic {
 		case ComposerModelParameterSemanticContext:
 			if value := strings.TrimSpace(effectiveParameters[ComposerModelParameterSemanticContext]); value != "" {
 				parameters[index].CurrentValue = value
@@ -300,6 +300,9 @@ func applyCursorWireRuntimeRejections(
 	parameters := append([]ComposerModelParameterCapability(nil), profile.Parameters...)
 	for index := range parameters {
 		rejectedValue := strings.TrimSpace(byParameter[parameters[index].ID])
+		if rejectedValue == "" {
+			rejectedValue = strings.TrimSpace(byParameter[parameters[index].Semantic])
+		}
 		if rejectedValue == "" {
 			continue
 		}
@@ -386,9 +389,6 @@ func extractCursorWireModelParameters(modelID string) map[string]string {
 			result[ComposerModelParameterSemanticReasoning] = value
 		}
 	}
-	if fast, ok := parsed.Lookup("fast"); ok {
-		result[ComposerModelParameterSemanticSpeed] = cursorWireSpeedFromFastParam(fast)
-	}
 	for _, param := range parsed.Params {
 		key := strings.TrimSpace(param.Key)
 		switch key {
@@ -401,6 +401,14 @@ func extractCursorWireModelParameters(modelID string) map[string]string {
 		return nil
 	}
 	return result
+}
+
+func extractCursorWireSpeed(modelID string) string {
+	parsed := parseParameterizedModelID(strings.TrimSpace(modelID))
+	if fast, ok := parsed.Lookup("fast"); ok {
+		return cursorWireSpeedFromFastParam(fast)
+	}
+	return ""
 }
 
 func mergeCursorWireModelParameters(

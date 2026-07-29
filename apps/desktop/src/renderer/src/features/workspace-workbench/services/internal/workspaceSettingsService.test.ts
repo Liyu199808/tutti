@@ -1138,6 +1138,7 @@ function createDesktopPreferencesService(input: {
       acknowledgedFields: [],
       supersededFields: []
     }),
+    rememberAgentModelParametersForAgentTarget: async () => {},
     rememberAgentGuiConversationRailCollapsed: async () => {},
     setAppCatalogChannel:
       input.onSetAppCatalogChannel ?? (async (channel) => channel),

@@ -407,10 +407,11 @@ func desktopAgentComposerDefaultsPayloadFromBiz(
 	defaults preferencesbiz.AgentComposerDefaults,
 ) desktopAgentComposerDefaultsPayload {
 	return desktopAgentComposerDefaultsPayload{
-		Model:            defaults.Model,
-		PermissionModeID: defaults.PermissionModeID,
-		ReasoningEffort:  defaults.ReasoningEffort,
-		Speed:            defaults.Speed,
+		Model:                      defaults.Model,
+		ModelParametersByBaseModel: cloneModelParametersByBaseModel(defaults.ModelParametersByBaseModel),
+		PermissionModeID:           defaults.PermissionModeID,
+		ReasoningEffort:            defaults.ReasoningEffort,
+		Speed:                      defaults.Speed,
 	}
 }
 
@@ -450,9 +451,25 @@ func agentComposerDefaultsFromPayload(
 	defaults desktopAgentComposerDefaultsPayload,
 ) preferencesbiz.AgentComposerDefaults {
 	return preferencesbiz.AgentComposerDefaults{
-		Model:            defaults.Model,
-		PermissionModeID: defaults.PermissionModeID,
-		ReasoningEffort:  defaults.ReasoningEffort,
-		Speed:            defaults.Speed,
+		Model:                      defaults.Model,
+		ModelParametersByBaseModel: cloneModelParametersByBaseModel(defaults.ModelParametersByBaseModel),
+		PermissionModeID:           defaults.PermissionModeID,
+		ReasoningEffort:            defaults.ReasoningEffort,
+		Speed:                      defaults.Speed,
 	}
+}
+
+func cloneModelParametersByBaseModel(input map[string]map[string]string) map[string]map[string]string {
+	if len(input) == 0 {
+		return nil
+	}
+	result := make(map[string]map[string]string, len(input))
+	for baseModelID, parameters := range input {
+		cloned := make(map[string]string, len(parameters))
+		for parameterID, value := range parameters {
+			cloned[parameterID] = value
+		}
+		result[baseModelID] = cloned
+	}
+	return result
 }

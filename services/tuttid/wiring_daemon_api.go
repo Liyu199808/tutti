@@ -328,9 +328,7 @@ func buildDaemonAPI(
 		workspaceAgents,
 		workspaceAgentsStore,
 	)
-	agentSessionService.AgentComposerDefaultsReader = preferences
-	preferences.AgentComposerDefaultsValidator = agentSessionService
-	preferences.AgentModelParametersValidator = agentSessionService
+	configureAgentComposerPreferences(agentSessionService, preferences)
 	agentSessionService.ExtensionComposerProfiles = agentExtensionComposerProfileResolver{
 		manager: agentExtensionManager,
 	}

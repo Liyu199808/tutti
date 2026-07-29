@@ -26,7 +26,7 @@ import { requiresFullAccessSafetyConfirmation } from "./model/agentPermissionMod
 import { acknowledgeCodexFullAccessWarning } from "./view/agentFullAccessWarningPreference";
 import type { AgentComposerSettingsMenuLabels } from "./model/composerSettingsMenuModel";
 import styles from "./AgentGUINode.styles";
-import { ComposerOptionInfoTooltip } from "./AgentComposerModelReasoningDropdown";
+import { ComposerOptionInfoTooltip } from "./ComposerModelOptionTooltips";
 
 export type { AgentComposerSettingsMenuLabels } from "./model/composerSettingsMenuModel";
 

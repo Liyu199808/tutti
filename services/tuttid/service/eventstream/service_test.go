@@ -537,6 +537,14 @@ func TestDesktopPreferencesPublisherIncludesDockIconStyle(t *testing.T) {
 
 	publisher := DesktopPreferencesPublisher{Service: service}
 	if err := publisher.PublishDesktopPreferencesUpdated(context.Background(), preferencesbiz.DesktopPreferences{
+		AgentComposerDefaultsByAgentTarget: map[string]preferencesbiz.AgentComposerDefaults{
+			"local:cursor": {
+				Model: "gpt-5.5[context=1m,reasoning=high]",
+				ModelParametersByBaseModel: map[string]map[string]string{
+					"gpt-5.5": {"context": "1m", "reasoning": "high"},
+				},
+			},
+		},
 		AgentGUIConversationRailCollapsedByProvider: map[string]bool{"codex": true},
 		AgentConversationDetailMode:                 "coding",
 		AppCatalogChannel:                           "staging",
@@ -567,6 +575,11 @@ func TestDesktopPreferencesPublisherIncludesDockIconStyle(t *testing.T) {
 	}
 	if !payload.Preferences.AgentGUIConversationRailCollapsedByProvider["codex"] {
 		t.Fatalf("published rail preference = %#v, want codex true", payload.Preferences.AgentGUIConversationRailCollapsedByProvider)
+	}
+	cursorDefaults := payload.Preferences.AgentComposerDefaultsByAgentTarget["local:cursor"]
+	if cursorDefaults.ModelParametersByBaseModel["gpt-5.5"]["context"] != "1m" ||
+		cursorDefaults.ModelParametersByBaseModel["gpt-5.5"]["reasoning"] != "high" {
+		t.Fatalf("published Cursor model parameter defaults = %#v", cursorDefaults.ModelParametersByBaseModel)
 	}
 }
 

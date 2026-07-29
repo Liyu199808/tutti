@@ -588,6 +588,42 @@ test("DesktopPreferencesService remembers trimmed and nullable composer defaults
   cleanup();
 });
 
+test("DesktopPreferencesService publishes one base-model parameter patch", async () => {
+  const patches: unknown[] = [];
+  const client = createDesktopPreferencesClient({
+    patchAgentComposerDefaultsForTarget: async (input) => {
+      patches.push(input);
+    }
+  });
+  const { service, cleanup } = await createServiceHarness({ client });
+
+  await service.rememberAgentModelParametersForAgentTarget("local:cursor", {
+    baseModelId: "gpt-5.5",
+    values: { context: "1m", reasoning: "high" }
+  });
+
+  assert.equal(patches.length, 1);
+  const published = patches[0] as {
+    agentTargetId: string;
+    clientMutationId: string;
+    patch: unknown;
+  };
+  assert.match(published.clientMutationId, /^[0-9a-f-]{36}$/u);
+  assert.deepEqual(
+    { agentTargetId: published.agentTargetId, patch: published.patch },
+    {
+      agentTargetId: "local:cursor",
+      patch: {
+        modelParameters: {
+          baseModelId: "gpt-5.5",
+          values: { context: "1m", reasoning: "high" }
+        }
+      }
+    }
+  );
+  cleanup();
+});
+
 test("DesktopPreferencesService merges conversation rail collapsed state per provider", async () => {
   const requests: Preferences[] = [];
   const client = createDesktopPreferencesClient({

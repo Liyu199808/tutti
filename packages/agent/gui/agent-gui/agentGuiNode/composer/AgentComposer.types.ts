@@ -152,6 +152,7 @@ export interface AgentComposerProps {
     modelLabel: string;
     modelSelectionLabel: string;
     modelContextWindowSuffix: string;
+    contextLabel: string;
     modelTooltipVersionLabel: string;
     defaultModel: string;
     loadingOptions: string;

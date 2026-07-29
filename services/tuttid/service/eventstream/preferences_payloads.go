@@ -78,12 +78,13 @@ type desktopAgentGUIConversationRailCollapsedByProviderPayload map[string]bool
 type desktopFileDefaultOpenersByExtensionPayload map[string]string
 
 type desktopAgentComposerDefaultsPayload struct {
-	Model            string `json:"model,omitempty"`
-	PermissionModeID string `json:"permissionModeId,omitempty"`
-	ReasoningEffort  string `json:"reasoningEffort,omitempty"`
-	Speed            string `json:"speed,omitempty"`
+	Model                      string                       `json:"model,omitempty"`
+	ModelParametersByBaseModel map[string]map[string]string `json:"modelParametersByBaseModel,omitempty"`
+	PermissionModeID           string                       `json:"permissionModeId,omitempty"`
+	ReasoningEffort            string                       `json:"reasoningEffort,omitempty"`
+	Speed                      string                       `json:"speed,omitempty"`
 }
 
 func (p desktopAgentComposerDefaultsPayload) isZero() bool {
-	return p.Model == "" && p.PermissionModeID == "" && p.ReasoningEffort == "" && p.Speed == ""
+	return p.Model == "" && len(p.ModelParametersByBaseModel) == 0 && p.PermissionModeID == "" && p.ReasoningEffort == "" && p.Speed == ""
 }

@@ -54,42 +54,49 @@ export interface PreferencesDesktopPreferencesV1 {
   agentComposerDefaultsByProvider: {
     "claude-code"?: {
       model?: string;
+      modelParametersByBaseModel?: Record<string, Record<string, string>>;
       permissionModeId?: string;
       reasoningEffort?: string;
       speed?: string;
     };
     codex?: {
       model?: string;
+      modelParametersByBaseModel?: Record<string, Record<string, string>>;
       permissionModeId?: string;
       reasoningEffort?: string;
       speed?: string;
     };
     "tutti-agent"?: {
       model?: string;
+      modelParametersByBaseModel?: Record<string, Record<string, string>>;
       permissionModeId?: string;
       reasoningEffort?: string;
       speed?: string;
     };
     cursor?: {
       model?: string;
+      modelParametersByBaseModel?: Record<string, Record<string, string>>;
       permissionModeId?: string;
       reasoningEffort?: string;
       speed?: string;
     };
     nexight?: {
       model?: string;
+      modelParametersByBaseModel?: Record<string, Record<string, string>>;
       permissionModeId?: string;
       reasoningEffort?: string;
       speed?: string;
     };
     openclaw?: {
       model?: string;
+      modelParametersByBaseModel?: Record<string, Record<string, string>>;
       permissionModeId?: string;
       reasoningEffort?: string;
       speed?: string;
     };
     opencode?: {
       model?: string;
+      modelParametersByBaseModel?: Record<string, Record<string, string>>;
       permissionModeId?: string;
       reasoningEffort?: string;
       speed?: string;
@@ -99,6 +106,7 @@ export interface PreferencesDesktopPreferencesV1 {
     string,
     {
       model?: string;
+      modelParametersByBaseModel?: Record<string, Record<string, string>>;
       permissionModeId?: string;
       reasoningEffort?: string;
       speed?: string;
@@ -444,16 +452,19 @@ export interface PreferencesAgentComposerDefaultsChangedPayloadV1 {
 
 export interface PreferencesAgentComposerDefaultsPatchRequestedPayloadV1 {
   agentTargetId: string;
-  patch: {
-    model?: string | null;
-    permissionModeId?: string | null;
-    reasoningEffort?: string | null;
-    speed?: string | null;
-    modelParameters?: {
-      baseModelId: string;
-      values: Record<string, string | null>;
-    };
-  };
+  patch:
+    | {
+        model?: string | null;
+        permissionModeId?: string | null;
+        reasoningEffort?: string | null;
+        speed?: string | null;
+      }
+    | {
+        modelParameters: {
+          baseModelId: string;
+          values: Record<string, string | null>;
+        };
+      };
   clientMutationId?: string;
 }
 

@@ -277,4 +277,156 @@ describe("useAgentGUIComposerPresentation", () => {
       result.current.stableComposerSettings.selectedReasoningEffortValue
     ).toBeNull();
   });
+
+  it("projects provider-neutral current, reasoning, Context, and Fast parameters", () => {
+    const model = "gpt-5.5[context=1m,reasoning=high,fast=true]";
+    const data: AgentGUINodeData = {
+      provider: "cursor",
+      agentTargetId: "local:cursor",
+      lastActiveAgentSessionId: null
+    };
+    const target: AgentGUIComposerTargetData = {
+      agentTargetId: "local:cursor",
+      data,
+      provider: "cursor",
+      targetId: "local:cursor"
+    };
+    const options: AgentActivityComposerOptions = {
+      provider: "cursor",
+      capabilities: null,
+      models: [{ value: model, label: "GPT-5.5" }],
+      reasoningEfforts: [],
+      speeds: [],
+      modelConfigurable: true,
+      reasoningConfigurable: false,
+      speedConfigurable: false,
+      modelParameterProfiles: [
+        {
+          modelId: model,
+          baseModelId: "gpt-5.5",
+          parameters: [
+            {
+              id: "context",
+              semantic: "context",
+              source: "model-family-preset",
+              preferenceScope: "baseModel",
+              availability: "supported",
+              configurable: true,
+              currentValue: "1m",
+              options: [{ value: "1m", label: "1m" }]
+            },
+            {
+              id: "reasoning",
+              semantic: "reasoning",
+              source: "model-family-preset",
+              preferenceScope: "baseModel",
+              availability: "supported",
+              configurable: true,
+              currentValue: "high",
+              options: [{ value: "high", label: "High" }]
+            },
+            {
+              id: "speed",
+              semantic: "speed",
+              source: "parameterized-model",
+              preferenceScope: "agentTarget",
+              availability: "supported",
+              configurable: true,
+              currentValue: "fast",
+              options: [{ value: "fast", label: "Fast" }]
+            },
+            {
+              id: "future",
+              semantic: "future",
+              source: "parameterized-model",
+              preferenceScope: "baseModel",
+              availability: "unknown",
+              configurable: false,
+              currentValue: "opaque",
+              options: []
+            }
+          ]
+        }
+      ],
+      skills: [],
+      behavior: {
+        collapseModelOptionsToLatest: false,
+        modelOptionsAuthoritative: false,
+        refreshModelOptionsAfterSettings: false,
+        prewarmDraftSession: false,
+        planModeExclusiveWithPermissionMode: false
+      },
+      loadedAtUnixMs: 1,
+      effectiveSettings: {
+        model,
+        modelParameters: {
+          context: "1m",
+          reasoning: "high",
+          future: "opaque"
+        },
+        speed: "fast"
+      }
+    };
+    const { result } = renderHook(() =>
+      useAgentGUIComposerPresentation({
+        activeConversation: null,
+        activeConversationId: null,
+        activeEngineSession: null,
+        activeSessionState: null,
+        agentActivityRuntime: {
+          projectPathIsRemote: false
+        } as AgentActivityRuntime,
+        composerSupport: composerSettingsSupportFromOptions(options, null),
+        composerOptionsLoading: false,
+        composerTargetProvider: "cursor",
+        data,
+        defaultReasoningEffort: null,
+        draftSettingsBySessionId: {
+          "__agent_gui_node_defaults__:target:local:cursor": {
+            model,
+            modelParameters: {
+              context: "1m",
+              reasoning: "high",
+              future: "opaque"
+            },
+            speed: "fast"
+          }
+        },
+        providerComposerOptions: options,
+        selectedComposerTargetData: target,
+        selectedProjectPath: null,
+        shouldApplyPreparedProjectSelection: true,
+        userProjects: []
+      })
+    );
+
+    expect(result.current.stableComposerSettings.modelParameters).toEqual([
+      expect.objectContaining({
+        id: "context",
+        semantic: "context",
+        baseModelId: "gpt-5.5",
+        currentValue: "1m",
+        configurable: true
+      }),
+      expect.objectContaining({
+        id: "reasoning",
+        semantic: "reasoning",
+        currentValue: "high",
+        configurable: true
+      }),
+      expect.objectContaining({
+        id: "speed",
+        semantic: "speed",
+        preferenceScope: "agentTarget",
+        currentValue: "fast",
+        configurable: true
+      }),
+      expect.objectContaining({
+        id: "future",
+        semantic: "future",
+        currentValue: "opaque",
+        configurable: false
+      })
+    ]);
+  });
 });

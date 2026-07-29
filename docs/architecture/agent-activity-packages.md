@@ -508,7 +508,8 @@ Per-model Context, reasoning, speed, and future parameters use the typed
 a `baseModelId`; every parameter carries its stable id, provider-neutral
 semantic, auditable source, preference scope, availability, configurable flag,
 verified current/default values, and candidate options. The daemon resolves
-each parameter independently with this fixed precedence:
+each semantic parameter role independently with this fixed precedence, so a
+differently named ACP parameter still replaces the matching fallback:
 
 ```text
 ACP structured metadata
@@ -536,10 +537,13 @@ Remembered defaults have a separate ownership split. Context, reasoning, and
 future model parameters are stored under
 `agentComposerDefaultsByAgentTarget[target].modelParametersByBaseModel[baseModelId]`.
 Fast remains the top-level `speed` preference on that exact Agent Target, even
-though support and actual state are reported per model. Sparse daemon
-transactions merge both forms and publish the same target-only invalidation;
-renderer local storage and full-preferences rewrites are not persistence
-authorities.
+though support and actual state are reported per model. New-session selections
+are validated against the projected profile before persistence. Active-session
+selections are remembered only after Host returns the runtime-confirmed
+settings; runtime rejection therefore cannot seed a false default. Sparse
+daemon transactions merge both forms and publish the same target-only
+invalidation; renderer local storage and full-preferences rewrites are not
+persistence authorities.
 An omitted pre-session descriptor means the connected daemon predates the
 typed composer capability contract and must remain an unknown/loading state.
 Core capability booleans must not be reconstructed from private
@@ -760,7 +764,7 @@ createAgentSessionEngine({
   identity: { workspaceId, origin },
   clock,
   scheduler,
-  commandPort,
+  commandPort
 });
 ```
 
@@ -806,32 +810,32 @@ export interface AgentActivityAdapter {
   }): Promise<AgentActivityMessagePage>;
 
   loadComposerOptions(
-    input: AgentActivityLoadComposerOptionsInput,
+    input: AgentActivityLoadComposerOptionsInput
   ): Promise<AgentActivityComposerOptions>;
 
   createSession(
-    input: AgentActivityCreateSessionInput,
+    input: AgentActivityCreateSessionInput
   ): Promise<AgentActivitySession>;
   sendInput(
-    input: AgentActivitySendInput,
+    input: AgentActivitySendInput
   ): Promise<AgentActivitySendInputResult>;
   goalControl(
-    input: AgentActivityGoalControlInput,
+    input: AgentActivityGoalControlInput
   ): Promise<AgentActivityGoalControlResult>;
   submitInteractive(
-    input: AgentActivitySubmitInteractiveInput,
+    input: AgentActivitySubmitInteractiveInput
   ): Promise<AgentActivitySubmitInteractiveResult>;
   deleteSession(
-    input: AgentActivityDeleteSessionInput,
+    input: AgentActivityDeleteSessionInput
   ): Promise<AgentActivityDeleteSessionResult>;
   deleteSessions(
-    input: AgentActivityDeleteSessionsInput,
+    input: AgentActivityDeleteSessionsInput
   ): Promise<AgentActivityDeleteSessionsResult>;
   renameSession(
-    input: AgentActivityRenameSessionInput,
+    input: AgentActivityRenameSessionInput
   ): Promise<AgentActivitySession>;
   setSessionPinned(
-    input: AgentActivitySetSessionPinnedInput,
+    input: AgentActivitySetSessionPinnedInput
   ): Promise<AgentActivitySession>;
 }
 ```

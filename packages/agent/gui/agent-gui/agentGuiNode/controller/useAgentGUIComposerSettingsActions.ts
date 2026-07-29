@@ -281,7 +281,8 @@ export function useAgentGUIComposerSettingsActions(
         }));
         const rememberedDefaultsPatch = composerDefaultsPatchFromSettings(
           supportedNextSettings,
-          mergedIntent
+          mergedIntent,
+          snapshotComposerOptions
         );
         if (rememberedDefaultsPatch) {
           const mutation = registerAgentGUIComposerDefaultsMutation(
@@ -374,16 +375,52 @@ export function useAgentGUIComposerSettingsActions(
       const currentComputerUse = sessionSettings?.computerUse ?? true;
       const sessionSettingsPatch: AgentSessionComposerSettings = {};
 
-      const rememberedDefaultsPatch = composerDefaultsPatchFromSettings(
+      const defaultAgentTargetId =
+        normalizeOptionalText(canonicalSession?.agentTargetId) ??
+        normalizeOptionalText(dataRef.current.agentTargetId);
+      const defaultProvider =
+        canonicalSession?.provider ?? dataRef.current.provider;
+      const activeComposerOptions = defaultAgentTargetId
+        ? (agentActivityRuntime.getSnapshot(workspaceId)
+            .composerOptionsByTargetKey?.[defaultAgentTargetId] ?? null)
+        : null;
+      let rememberedDefaultsPatch = composerDefaultsPatchFromSettings(
         supportedNextSettings,
-        supportedNextSettings as AgentSessionComposerSettings
+        {
+          ...(sessionSettings ?? {}),
+          ...supportedNextSettings
+        } as AgentSessionComposerSettings,
+        activeComposerOptions
       );
+      const confirmedProfileModel = normalizeOptionalText(
+        supportedNextSettings.model ?? sessionSettings?.model
+      );
+      const confirmedProfile = confirmedProfileModel
+        ? (activeComposerOptions?.modelParameterProfiles ?? []).find(
+            (profile) => profile.modelId === confirmedProfileModel
+          )
+        : undefined;
+      if (rememberedDefaultsPatch && confirmedProfile) {
+        // Model-scoped parameters and profile-backed Fast are remembered by
+        // tuttid only after the live runtime confirms the Session update.
+        // Persisting them here would let an ACP rejection leave a false
+        // target default behind.
+        delete rememberedDefaultsPatch.modelParameters;
+        if (
+          supportedNextSettings.speed !== undefined &&
+          confirmedProfile.parameters.some(
+            (parameter) =>
+              parameter.semantic === "speed" &&
+              parameter.preferenceScope === "agentTarget"
+          )
+        ) {
+          delete rememberedDefaultsPatch.speed;
+        }
+        if (Object.keys(rememberedDefaultsPatch).length === 0) {
+          rememberedDefaultsPatch = null;
+        }
+      }
       if (rememberedDefaultsPatch) {
-        const defaultAgentTargetId =
-          normalizeOptionalText(canonicalSession?.agentTargetId) ??
-          normalizeOptionalText(dataRef.current.agentTargetId);
-        const defaultProvider =
-          canonicalSession?.provider ?? dataRef.current.provider;
         const saving = invokeRememberComposerDefaults(
           onRememberComposerDefaultsRef.current,
           {

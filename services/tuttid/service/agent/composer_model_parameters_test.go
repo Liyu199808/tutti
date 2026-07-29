@@ -29,7 +29,7 @@ func TestResolveComposerModelParameterProfilesUsesAuditedSourcePrecedencePerPara
 	acp := []ComposerModelParameterProfile{{
 		ModelID: "composer-2.5[context=1m,future=opaque]", BaseModelID: "composer-2.5",
 		Parameters: []ComposerModelParameterCapability{{
-			ID: "context", Semantic: "context", Source: ComposerModelParameterSourceACP,
+			ID: "context-window", Semantic: "context", Source: ComposerModelParameterSourceACP,
 			PreferenceScope: "baseModel", Availability: "supported", Configurable: true, CurrentValue: "1m",
 			Options: []ComposerConfigOptionValue{{ID: "auto", Label: "Auto", Value: "auto"}, {ID: "1m", Label: "1M", Value: "1m"}},
 		}},
@@ -40,7 +40,7 @@ func TestResolveComposerModelParameterProfilesUsesAuditedSourcePrecedencePerPara
 		t.Fatalf("profiles = %#v", profiles)
 	}
 	contextParameter := profiles[0].Parameters[0]
-	if contextParameter.Source != ComposerModelParameterSourceACP || contextParameter.CurrentValue != "1m" || len(contextParameter.Options) != 2 {
+	if contextParameter.ID != "context-window" || contextParameter.Source != ComposerModelParameterSourceACP || contextParameter.CurrentValue != "1m" || len(contextParameter.Options) != 2 {
 		t.Fatalf("resolved context parameter = %#v", contextParameter)
 	}
 	unknown := profiles[0].Parameters[1]

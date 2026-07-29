@@ -689,24 +689,6 @@ func sessionSettingsWithACPConfig(
 		settings.Speed = speed
 		hasSettings = true
 	}
-	modelParameters := cloneModelParameterValues(settings.ModelParameters)
-	for key, raw := range config {
-		canonicalKey := canonicalACPConfigOptionID(key)
-		switch canonicalKey {
-		case "model", "mode", "permission_mode", "reasoning_effort", "service_tier", "speed", "fast":
-			continue
-		}
-		value := asStringRaw(raw)
-		if canonicalKey == "" || strings.TrimSpace(value) == "" {
-			continue
-		}
-		if modelParameters == nil {
-			modelParameters = map[string]string{}
-		}
-		modelParameters[canonicalKey] = value
-		hasSettings = true
-	}
-	settings.ModelParameters = modelParameters
 	if !hasSettings {
 		return nil
 	}

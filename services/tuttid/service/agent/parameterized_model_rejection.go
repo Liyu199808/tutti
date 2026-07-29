@@ -94,22 +94,13 @@ func (c *cursorWireRejectionCache) snapshot(agentSessionID string) map[string]ma
 	return result
 }
 
-func (c *cursorWireRejectionCache) clear(agentSessionID string) {
-	if c == nil {
-		return
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.bySession, strings.TrimSpace(agentSessionID))
-}
-
 func (s *Service) cursorWireRejections() *cursorWireRejectionCache {
 	if s == nil {
 		return nil
 	}
-	if s.cursorWireRejectionCache == nil {
+	s.cursorWireRejectionCacheOnce.Do(func() {
 		s.cursorWireRejectionCache = &cursorWireRejectionCache{}
-	}
+	})
 	return s.cursorWireRejectionCache
 }
 

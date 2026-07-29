@@ -2,6 +2,8 @@ import { createDecorator } from "@tutti-os/infra/di";
 import type { DesktopLocale } from "@shared/i18n";
 import type {
   DesktopAgentComposerDefaultsPatch,
+  DesktopAgentComposerDefaultsField,
+  DesktopAgentModelParametersPatch,
   DesktopAgentConversationDetailMode,
   DesktopAgentProvider,
   DesktopDefaultAgentProvider,
@@ -21,9 +23,6 @@ import type {
 } from "@shared/preferences";
 import type { DesktopThemeSource, DesktopThemeState } from "@shared/theme";
 import type { DesktopPreferencesReadableStoreState } from "./desktopPreferencesTypes.ts";
-
-export type DesktopAgentComposerDefaultsField =
-  keyof DesktopAgentComposerDefaultsPatch;
 
 export interface DesktopAgentComposerDefaultsPatchResult {
   acknowledgedFields: DesktopAgentComposerDefaultsField[];
@@ -81,6 +80,10 @@ export interface IDesktopPreferencesService {
     agentTargetId: string,
     defaults: DesktopAgentComposerDefaultsPatch | null
   ): Promise<DesktopAgentComposerDefaultsPatchResult>;
+  rememberAgentModelParametersForAgentTarget(
+    agentTargetId: string,
+    patch: DesktopAgentModelParametersPatch
+  ): Promise<void>;
   rememberAgentGuiConversationRailCollapsed(
     provider: DesktopAgentProvider,
     collapsed: boolean

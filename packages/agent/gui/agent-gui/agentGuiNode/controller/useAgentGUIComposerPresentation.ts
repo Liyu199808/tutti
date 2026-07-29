@@ -186,6 +186,9 @@ export function useAgentGUIComposerPresentation(
     const protectedSettings = overlayComposerDefaults(
       {
         model: draftModel,
+        ...(draftSettings.modelParameters
+          ? { modelParameters: { ...draftSettings.modelParameters } }
+          : {}),
         permissionModeId: selectedPermissionModeValue,
         reasoningEffort: optionsReasoningEffort,
         speed: draftSpeed
@@ -206,23 +209,45 @@ export function useAgentGUIComposerPresentation(
     const presentedPermissionMode = normalizePermissionModeId(
       protectedSettings.permissionModeId
     );
+    const selectedModelParameterProfile =
+      presentedModel && presentedModel !== "auto"
+        ? (input.providerComposerOptions?.modelParameterProfiles ?? []).find(
+            (profile) => profile.modelId === presentedModel
+          )
+        : undefined;
+    const hasLegacyReasoningOptions =
+      (activeSessionReasoningSelection?.options.length ?? 0) > 0;
+    const hasLegacySpeedOptions =
+      (activeSessionSpeedSelection?.options.length ?? 0) > 0;
     const modelParameters =
       presentedModel && presentedModel !== "auto"
-        ? (input.providerComposerOptions?.modelParameterProfiles ?? [])
-          .find((profile) => profile.modelId === presentedModel)?.parameters
-          .filter((parameter) => parameter.semantic === "context")
-          .map((parameter) => ({
-            id: parameter.id,
-            label: "context",
-            currentValue:
-              protectedSettings.modelParameters?.[parameter.id] ??
-              parameter.currentValue ??
-              parameter.defaultValue ??
-              null,
-            configurable:
-              parameter.configurable && parameter.options.length > 0,
-            options: parameter.options
-          }))
+        ? (selectedModelParameterProfile?.parameters ?? [])
+            .filter(
+              (parameter) =>
+                !(
+                  (parameter.semantic === "reasoning" &&
+                    hasLegacyReasoningOptions) ||
+                  (parameter.semantic === "speed" && hasLegacySpeedOptions)
+                )
+            )
+            .map((parameter) => ({
+              id: parameter.id,
+              baseModelId: selectedModelParameterProfile?.baseModelId ?? "",
+              semantic: parameter.semantic,
+              preferenceScope: parameter.preferenceScope,
+              availability: parameter.availability,
+              label: parameter.semantic || parameter.id,
+              currentValue:
+                (parameter.semantic === "speed"
+                  ? protectedSettings.speed
+                  : protectedSettings.modelParameters?.[parameter.id]) ??
+                parameter.currentValue ??
+                parameter.defaultValue ??
+                null,
+              configurable:
+                parameter.configurable && parameter.options.length > 0,
+              options: parameter.options
+            }))
         : [];
     return {
       sessionSettings,

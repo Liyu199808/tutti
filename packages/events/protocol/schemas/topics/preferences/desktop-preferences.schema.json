@@ -166,6 +166,13 @@
       "additionalProperties": false,
       "properties": {
         "model": { "type": "string" },
+        "modelParametersByBaseModel": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        },
         "permissionModeId": { "type": "string" },
         "reasoningEffort": { "type": "string" },
         "speed": { "type": "string" }

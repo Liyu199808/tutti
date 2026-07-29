@@ -116,6 +116,10 @@ export interface QueuedComposerSettingsUpdate {
 
 export interface AgentGUIComposerDefaults {
   model?: string | null;
+  modelParameters?: {
+    baseModelId: string;
+    values: Record<string, string | null>;
+  };
   permissionModeId?: string | null;
   reasoningEffort?: string | null;
   speed?: string | null;
@@ -138,13 +142,14 @@ export type AgentGUIComposerDefaultsField =
   (typeof rememberComposerDefaultsFields)[number];
 
 export interface AgentGUIRememberComposerDefaultsResult {
-  acknowledgedFields: AgentGUIComposerDefaultsField[];
-  supersededFields: AgentGUIComposerDefaultsField[];
+  acknowledgedFields: (AgentGUIComposerDefaultsField | "modelParameters")[];
+  supersededFields: (AgentGUIComposerDefaultsField | "modelParameters")[];
 }
 
 export function composerDefaultsPatchFromSettings(
   touched: Partial<AgentSessionComposerSettings>,
-  finalSettings: AgentSessionComposerSettings
+  finalSettings: AgentSessionComposerSettings,
+  composerOptions?: AgentActivityComposerOptions | null
 ): AgentGUIComposerDefaults | null {
   const patch: AgentGUIComposerDefaults = {};
   for (const field of rememberComposerDefaultsFields) {
@@ -155,6 +160,33 @@ export function composerDefaultsPatchFromSettings(
     if (finalValue === null) continue;
     patch[field] = finalValue;
   }
+  if (touched.modelParameters !== undefined) {
+    const selectedModel = normalizeOptionalText(finalSettings.model);
+    const profile = selectedModel
+      ? (composerOptions?.modelParameterProfiles ?? []).find(
+          (candidate) => candidate.modelId === selectedModel
+        )
+      : undefined;
+    if (profile?.baseModelId) {
+      const values = Object.fromEntries(
+        Object.entries(finalSettings.modelParameters ?? {}).flatMap(
+          ([parameterId, value]) => {
+            const normalizedId = parameterId.trim();
+            const normalizedValue = normalizeOptionalText(value);
+            return normalizedId && normalizedValue
+              ? [[normalizedId, normalizedValue]]
+              : [];
+          }
+        )
+      );
+      if (Object.keys(values).length > 0) {
+        patch.modelParameters = {
+          baseModelId: profile.baseModelId,
+          values
+        };
+      }
+    }
+  }
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
@@ -163,7 +195,12 @@ export function overlayComposerDefaults(
   optimistic: AgentSessionComposerSettings | null | undefined
 ): AgentSessionComposerSettings {
   if (!optimistic) return base;
-  const result = { ...base };
+  const result = {
+    ...base,
+    ...(optimistic.modelParameters
+      ? { modelParameters: { ...optimistic.modelParameters } }
+      : {})
+  };
   for (const field of rememberComposerDefaultsFields) {
     const value = normalizeOptionalText(optimistic[field]);
     if (value !== null) {

@@ -1,11 +1,4 @@
-import {
-  Fragment,
-  cloneElement,
-  useCallback,
-  useState,
-  type HTMLAttributes,
-  type ReactElement
-} from "react";
+import { Fragment, useCallback, useState } from "react";
 import { ChevronDown, Star, ZapIcon } from "lucide-react";
 import {
   CheckIcon,
@@ -18,7 +11,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-  RoomsHintIcon,
+  Switch,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -40,43 +33,12 @@ import {
 } from "./model/composerModelChoiceHistory";
 import { translate } from "../../i18n/index";
 import styles from "./AgentGUINode.styles";
+import {
+  ComposerModelOptionTooltip,
+  ComposerOptionInfoTooltip
+} from "./ComposerModelOptionTooltips";
 
-export function ComposerOptionInfoTooltip({
-  description,
-  tooltipsEnabled = true
-}: {
-  description: string;
-  tooltipsEnabled?: boolean;
-}): React.JSX.Element {
-  const stopSelect = (event: React.SyntheticEvent): void => {
-    event.preventDefault();
-    event.stopPropagation();
-  };
-
-  const trigger = (
-    <span
-      className="pointer-events-none inline-flex shrink-0 cursor-help text-[var(--agent-gui-text-tertiary)] opacity-0 transition-opacity group-hover/composer-option:pointer-events-auto group-hover/composer-option:opacity-100 group-data-[highlighted]/composer-option:pointer-events-auto group-data-[highlighted]/composer-option:opacity-100"
-      data-agent-composer-option-info-trigger="true"
-      onClick={stopSelect}
-      onPointerDown={stopSelect}
-    >
-      <RoomsHintIcon aria-hidden className="size-3" />
-    </span>
-  );
-
-  if (!tooltipsEnabled) {
-    return trigger;
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-      <TooltipContent side="right" className="max-w-[240px] whitespace-normal">
-        {description}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
+export { ComposerOptionInfoTooltip } from "./ComposerModelOptionTooltips";
 
 export function AgentModelReasoningDropdown({
   composerSettings,
@@ -95,6 +57,7 @@ export function AgentModelReasoningDropdown({
   modelHistoryTargetId?: string | null;
   onSettingsChange: (patch: {
     model?: string;
+    modelParameters?: Record<string, string>;
     reasoningEffort?: string;
     speed?: string;
   }) => void;
@@ -155,6 +118,7 @@ export function AgentModelReasoningDropdown({
     composerSettings.isSettingsLoading;
   const applySettingsChange = (patch: {
     model?: string;
+    modelParameters?: Record<string, string>;
     reasoningEffort?: string;
     speed?: string;
   }): void => {
@@ -182,6 +146,9 @@ export function AgentModelReasoningDropdown({
     );
   };
   const favoriteValueSet = new Set(menu.model.favoriteValues);
+  const hasModelSpeedParameter = (composerSettings.modelParameters ?? []).some(
+    (parameter) => parameter.semantic === "speed"
+  );
   const modelDescriptionPresentation = menu.model.optionDescriptionInline
     ? ("inline" as const)
     : ("model-tooltip" as const);
@@ -205,7 +172,7 @@ export function AgentModelReasoningDropdown({
       data-agent-model-reasoning-trigger="true"
     >
       <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-        {menu.speed.show && menu.trigger.isFast ? (
+        {(menu.speed.show || hasModelSpeedParameter) && menu.trigger.isFast ? (
           <ZapIcon
             aria-hidden
             className="size-3.5 shrink-0"
@@ -379,9 +346,97 @@ export function AgentModelReasoningDropdown({
             ) : null}
           </>
         ) : null}
-        {menu.model.show && (menu.reasoning.show || menu.speed.show) ? (
+        {menu.model.show &&
+        ((composerSettings.modelParameters?.length ?? 0) > 0 ||
+          menu.reasoning.show ||
+          menu.speed.show) ? (
           <DropdownMenuSeparator />
         ) : null}
+        {(composerSettings.modelParameters ?? []).map((parameter) =>
+          parameter.semantic === "speed" &&
+          parameter.preferenceScope === "agentTarget" ? (
+            <div
+              key={parameter.id}
+              className={cn(
+                styles.composerMenuItem,
+                "flex cursor-default items-center gap-2",
+                !parameter.configurable && "opacity-60"
+              )}
+              data-agent-model-parameter-fast-row="true"
+            >
+              <span className="min-w-0 flex-1 truncate">
+                {modelParameterLabel(
+                  parameter.semantic,
+                  parameter.label,
+                  labels
+                )}
+              </span>
+              <span className="text-[var(--text-tertiary)]">
+                {parameter.availability === "supported"
+                  ? parameter.currentValue === "fast"
+                    ? labels.speedOptionFast
+                    : labels.speedOptionStandard
+                  : labels.inheritedUnavailable}
+              </span>
+              <Switch
+                size="sm"
+                checked={parameter.currentValue === "fast"}
+                disabled={!parameter.configurable}
+                aria-label={modelParameterLabel(
+                  parameter.semantic,
+                  parameter.label,
+                  labels
+                )}
+                data-agent-model-parameter-fast-switch="true"
+                onCheckedChange={(checked) =>
+                  applySettingsChange({
+                    speed: checked ? "fast" : "standard"
+                  })
+                }
+              />
+            </div>
+          ) : (
+            <DropdownMenuSub key={parameter.id}>
+              <DropdownMenuSubTrigger
+                className={cn(styles.composerMenuItem, "[&>svg]:!ml-0.5")}
+                disabled={!parameter.configurable}
+                data-agent-model-parameter-submenu-trigger={parameter.id}
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {modelParameterLabel(
+                    parameter.semantic,
+                    parameter.label,
+                    labels
+                  )}
+                </span>
+                <span className="text-[var(--text-tertiary)]">
+                  {parameter.currentValue ?? labels.inheritedUnavailable}
+                </span>
+              </DropdownMenuSubTrigger>
+              {parameter.configurable ? (
+                <DropdownMenuSubContent
+                  className={cn(styles.composerMenuContent, "min-w-[132px]")}
+                >
+                  <ComposerMenuOptionItems
+                    options={parameter.options}
+                    selectedValue={parameter.currentValue ?? ""}
+                    tooltipsEnabled
+                    onSelect={(value) =>
+                      applySettingsChange({
+                        modelParameters: {
+                          ...(composerSettings.draftSettings.modelParameters ??
+                            composerSettings.sessionSettings?.modelParameters ??
+                            {}),
+                          [parameter.id]: value
+                        }
+                      })
+                    }
+                  />
+                </DropdownMenuSubContent>
+              ) : null}
+            </DropdownMenuSub>
+          )
+        )}
         {menu.reasoning.show ? (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger
@@ -451,6 +506,23 @@ export function AgentModelReasoningDropdown({
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+function modelParameterLabel(
+  semantic: string,
+  fallback: string,
+  labels: AgentComposerSettingsMenuLabels
+): string {
+  switch (semantic) {
+    case "context":
+      return labels.contextLabel;
+    case "reasoning":
+      return labels.reasoningLabel;
+    case "speed":
+      return labels.speedLabel;
+    default:
+      return fallback;
+  }
 }
 
 function readComposerLocalStorage(key: string): string | null {
@@ -646,51 +718,5 @@ function ComposerMenuOptionItems({
         );
       })}
     </>
-  );
-}
-
-function ComposerModelOptionTooltip({
-  children,
-  option,
-  tooltipsEnabled = true
-}: {
-  children: ReactElement<HTMLAttributes<HTMLElement>>;
-  option: ComposerMenuOption;
-  tooltipsEnabled?: boolean;
-}): React.JSX.Element {
-  if (!tooltipsEnabled || !option.tooltip) {
-    return children;
-  }
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        {cloneElement(children, {
-          "data-agent-model-option-tooltip-trigger": "true"
-        } as Partial<HTMLAttributes<HTMLElement>> &
-          Record<"data-agent-model-option-tooltip-trigger", string>)}
-      </TooltipTrigger>
-      <TooltipContent
-        side="right"
-        align="start"
-        sideOffset={8}
-        className="flex w-[320px] max-w-[calc(100vw-32px)] flex-col items-start gap-0 whitespace-normal rounded-lg border border-[var(--line-2)] bg-[var(--background-fronted)] px-4 py-3 text-[13px] leading-[1.3] text-[var(--text-primary)] shadow-lg"
-        data-agent-model-option-tooltip="true"
-      >
-        <span className="block text-[15px] font-semibold leading-[1.2]">
-          {option.tooltip.title}
-        </span>
-        {option.tooltip.description ? (
-          <span className="mt-1.5 block text-[13px] leading-[1.35] text-[var(--text-tertiary)]">
-            {option.tooltip.description}
-          </span>
-        ) : null}
-        {option.tooltip.contextWindow ? (
-          <span className="mt-4 block">{option.tooltip.contextWindow}</span>
-        ) : null}
-        {option.tooltip.version ? (
-          <span className="mt-4 block italic">{option.tooltip.version}</span>
-        ) : null}
-      </TooltipContent>
-    </Tooltip>
   );
 }

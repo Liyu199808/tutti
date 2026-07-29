@@ -176,7 +176,7 @@ func TestCanonicalACPReasoningAliasPrecedenceIsDeterministicAndPreservesUnknownO
 	}
 }
 
-func TestSessionSettingsWithACPConfigPreservesUnknownCurrentModelParameters(t *testing.T) {
+func TestSessionSettingsWithACPConfigDoesNotPromoteUnrelatedOptionsToModelParameters(t *testing.T) {
 	settings := sessionSettingsWithACPConfig(
 		&SessionSettings{Model: "composer-2.5", ModelParameters: map[string]string{"retained": "old"}},
 		"cursor",
@@ -194,9 +194,7 @@ func TestSessionSettingsWithACPConfigPreservesUnknownCurrentModelParameters(t *t
 		settings.ReasoningEffort != "high" || settings.Speed != "off" {
 		t.Fatalf("settings = %#v", settings)
 	}
-	if settings.ModelParameters["context"] != "1m" ||
-		settings.ModelParameters["future_parameter"] != " opaque-current " ||
-		settings.ModelParameters["retained"] != "old" {
+	if len(settings.ModelParameters) != 1 || settings.ModelParameters["retained"] != "old" {
 		t.Fatalf("model parameters = %#v", settings.ModelParameters)
 	}
 }

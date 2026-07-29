@@ -1,11 +1,9 @@
 import {
   desktopAgentComposerDefaultsFields,
+  type DesktopAgentComposerDefaultsField,
   type DesktopAgentComposerDefaultsPatch
 } from "../../../../../../shared/preferences/index.ts";
-import type {
-  DesktopAgentComposerDefaultsField,
-  DesktopAgentComposerDefaultsPatchResult
-} from "../desktopPreferencesService.interface.ts";
+import type { DesktopAgentComposerDefaultsPatchResult } from "../desktopPreferencesService.interface.ts";
 
 type AgentComposerDefaultsField = DesktopAgentComposerDefaultsField;
 
