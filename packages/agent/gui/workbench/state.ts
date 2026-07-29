@@ -361,11 +361,18 @@ function normalizeAgentGuiWorkbenchComposerOverrides(
   if (typeof value.model === "string" && value.model.trim()) {
     composerOverrides.model = value.model.trim();
   }
+  const modelParameters = normalizeStringRecord(value.modelParameters);
+  if (modelParameters) {
+    composerOverrides.modelParameters = modelParameters;
+  }
   if (
     typeof value.reasoningEffort === "string" &&
     value.reasoningEffort.trim()
   ) {
     composerOverrides.reasoningEffort = value.reasoningEffort.trim();
+  }
+  if (typeof value.speed === "string" && value.speed.trim()) {
+    composerOverrides.speed = value.speed.trim();
   }
   if (
     typeof value.permissionModeId === "string" &&
@@ -452,10 +459,25 @@ function composerOverridesEqual(
 ): boolean {
   return (
     (left?.model ?? null) === (right?.model ?? null) &&
+    stringRecordsEqual(left?.modelParameters, right?.modelParameters) &&
     (left?.permissionModeId ?? null) === (right?.permissionModeId ?? null) &&
     (left?.planMode ?? null) === (right?.planMode ?? null) &&
-    (left?.reasoningEffort ?? null) === (right?.reasoningEffort ?? null)
+    (left?.reasoningEffort ?? null) === (right?.reasoningEffort ?? null) &&
+    (left?.speed ?? null) === (right?.speed ?? null)
   );
+}
+
+function normalizeStringRecord(value: unknown): Record<string, string> | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const normalized: Record<string, string> = {};
+  for (const [rawKey, rawValue] of Object.entries(value)) {
+    if (rawKey.trim() && typeof rawValue === "string" && rawValue.trim()) {
+      normalized[rawKey] = rawValue;
+    }
+  }
+  return Object.keys(normalized).length > 0 ? normalized : null;
 }
 
 function composerOverridesByProviderEqual(

@@ -539,9 +539,35 @@ func agentComposerDefaultsFromGenerated(
 	value tuttigenerated.DesktopAgentComposerDefaults,
 ) preferencesbiz.AgentComposerDefaults {
 	return preferencesbiz.AgentComposerDefaults{
-		Model:            optionalStringValue(value.Model),
-		PermissionModeID: optionalStringValue(value.PermissionModeId),
-		ReasoningEffort:  optionalStringValue(value.ReasoningEffort),
-		Speed:            optionalStringValue(value.Speed),
+		Model:                      optionalStringValue(value.Model),
+		ModelParametersByBaseModel: modelParametersByBaseModelFromGenerated(value.ModelParametersByBaseModel),
+		PermissionModeID:           optionalStringValue(value.PermissionModeId),
+		ReasoningEffort:            optionalStringValue(value.ReasoningEffort),
+		Speed:                      optionalStringValue(value.Speed),
 	}
+}
+
+func modelParametersByBaseModelFromGenerated(
+	value *map[string]map[string]string,
+) map[string]map[string]string {
+	if value == nil {
+		return nil
+	}
+	result := map[string]map[string]string{}
+	for baseModelID, parameters := range *value {
+		baseModelID = strings.TrimSpace(baseModelID)
+		if baseModelID == "" {
+			continue
+		}
+		values := map[string]string{}
+		for parameterID, selected := range parameters {
+			if strings.TrimSpace(parameterID) != "" && strings.TrimSpace(selected) != "" {
+				values[parameterID] = selected
+			}
+		}
+		if len(values) > 0 {
+			result[baseModelID] = values
+		}
+	}
+	return result
 }

@@ -2432,6 +2432,64 @@ func TestControllerUpdateSettingsDoesNotPersistFailedLivePatch(t *testing.T) {
 	}
 }
 
+func TestControllerUpdateSettingsRejectsUnconfirmableModelParameters(t *testing.T) {
+	t.Parallel()
+
+	adapter := &statefulInteractiveAdapter{}
+	controller := NewController([]Adapter{adapter}, nil)
+	started, err := controller.Start(context.Background(), StartInput{
+		RoomID:         "room-1",
+		AgentSessionID: "agent-session-model-parameters",
+		Provider:       ProviderCodex,
+		CWD:            "/workspace",
+		Title:          "Codex",
+		Settings:       &SessionSettings{Model: "gpt-5.2-codex"},
+	})
+	if err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	next := "1m"
+	_, err = controller.UpdateSettings(context.Background(), UpdateSettingsInput{
+		RoomID:         "room-1",
+		AgentSessionID: started.Session.AgentSessionID,
+		Settings: SessionSettingsPatch{
+			ModelParameters: map[string]*string{"context": &next},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "cannot confirm model parameter") {
+		t.Fatalf("UpdateSettings error = %v, want unconfirmable model parameter rejection", err)
+	}
+
+	session, ok := controller.Session("room-1", started.Session.AgentSessionID)
+	if !ok {
+		t.Fatal("Session returned ok=false after rejected update")
+	}
+	if got := session.SettingsValue().ModelParameters["context"]; got != "" {
+		t.Fatalf("stored context = %q, want rejected value absent", got)
+	}
+}
+
+func TestControllerStartRejectsUnconfirmableModelParameters(t *testing.T) {
+	t.Parallel()
+
+	controller := NewController([]Adapter{&statefulInteractiveAdapter{}}, nil)
+	_, err := controller.Start(context.Background(), StartInput{
+		RoomID:         "room-1",
+		AgentSessionID: "agent-session-model-parameters",
+		Provider:       ProviderCodex,
+		CWD:            "/workspace",
+		Title:          "Codex",
+		Settings: &SessionSettings{
+			Model:           "gpt-5.2-codex",
+			ModelParameters: map[string]string{"context": "1m"},
+		},
+	})
+	if !errors.Is(err, ErrModelParameterSettingsUnsupported) {
+		t.Fatalf("Start error = %v, want ErrModelParameterSettingsUnsupported", err)
+	}
+}
+
 func TestControllerUpdateSettingsDoesNotAdvanceSessionUpdatedAt(t *testing.T) {
 	t.Parallel()
 

@@ -17,11 +17,17 @@ type preferencesMutatorStub struct {
 }
 
 type agentComposerDefaultsPatcherStub struct {
-	inputs []preferencesservice.PatchAgentComposerDefaultsForTargetInput
+	inputs                []preferencesservice.PatchAgentComposerDefaultsForTargetInput
+	modelParametersInputs []preferencesservice.PatchAgentModelParametersForTargetInput
 }
 
 func (s *agentComposerDefaultsPatcherStub) PatchAgentComposerDefaultsForTarget(_ context.Context, input preferencesservice.PatchAgentComposerDefaultsForTargetInput) (preferencesbiz.AgentComposerDefaults, error) {
 	s.inputs = append(s.inputs, input)
+	return preferencesbiz.AgentComposerDefaults{}, nil
+}
+
+func (s *agentComposerDefaultsPatcherStub) PatchAgentModelParametersForTarget(_ context.Context, input preferencesservice.PatchAgentModelParametersForTargetInput) (preferencesbiz.AgentComposerDefaults, error) {
+	s.modelParametersInputs = append(s.modelParametersInputs, input)
 	return preferencesbiz.AgentComposerDefaults{}, nil
 }
 
@@ -453,6 +459,17 @@ func TestAgentComposerDefaultsPatchIntentUsesDedicatedMutationAndTargetInvalidat
 	permission := patcher.inputs[0].Patch[preferencesbiz.AgentComposerDefaultsFieldPermissionModeID]
 	if permission == nil || *permission != "full-access" {
 		t.Fatalf("patch = %#v", patcher.inputs[0].Patch)
+	}
+	if err := service.PublishFromClient(context.Background(), ClientEvent{
+		Topic:   TopicPreferencesAgentComposerDefaultsPatchRequested,
+		Payload: []byte(`{"agentTargetId":"local:opencode","patch":{"modelParameters":{"baseModelId":"model-a","values":{"context":"1m"}}},"clientMutationId":"mutation-2"}`),
+	}); err != nil {
+		t.Fatalf("PublishFromClient(model parameters) error = %v", err)
+	}
+	if len(patcher.modelParametersInputs) != 1 ||
+		patcher.modelParametersInputs[0].AgentTargetID != "local:opencode" ||
+		patcher.modelParametersInputs[0].BaseModelID != "model-a" {
+		t.Fatalf("model parameter inputs = %#v", patcher.modelParametersInputs)
 	}
 
 	session := service.OpenSession()

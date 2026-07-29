@@ -321,7 +321,7 @@ type RuntimePreparationPort interface {
 	Cleanup(context.Context, RuntimeCleanupInput) error
 }
 
-// SettingsPolicy keeps provider-specific model, reasoning, and speed
+// SettingsPolicy keeps provider-specific model, model-parameter, reasoning, and speed
 // normalization in adapters while Host owns the application decision between
 // a durable historical update and a live runtime update.
 type SettingsPolicy interface {

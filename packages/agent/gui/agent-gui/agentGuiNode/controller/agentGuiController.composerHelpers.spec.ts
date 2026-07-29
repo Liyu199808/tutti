@@ -308,6 +308,7 @@ describe("target-keyed composer defaults", () => {
   it("writes target composer overrides without mutating provider defaults", () => {
     const next = nodeDataFromComposerSettings(baseNodeData, {
       model: "target-new",
+      modelParameters: { context: "1m", future: "opaque" },
       reasoningEffort: null,
       speed: null,
       planMode: false,
@@ -319,6 +320,9 @@ describe("target-keyed composer defaults", () => {
     expect(next.composerOverridesByAgentTargetId?.["local:codex"]?.model).toBe(
       "target-new"
     );
+    expect(
+      next.composerOverridesByAgentTargetId?.["local:codex"]?.modelParameters
+    ).toEqual({ context: "1m", future: "opaque" });
     expect(next.composerOverridesByProvider?.codex?.model).toBe(
       "provider-model"
     );

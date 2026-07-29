@@ -39,6 +39,8 @@ export type {
   AgentActivityComposerBehavior,
   AgentActivityComposerCapabilityOption,
   AgentActivityComposerCommandOption,
+  AgentActivityComposerModelParameterCapability,
+  AgentActivityComposerModelParameterProfile,
   AgentActivityComposerOptions,
   AgentActivityComposerOptionsLoadStatus,
   AgentActivityComposerPermissionConfig,
@@ -350,6 +352,7 @@ export interface AgentActivityCreateSessionInput {
   initialDisplayPrompt?: string | null;
   submitDiagnostics?: AgentActivitySubmitDiagnostics;
   model?: string | null;
+  modelParameters?: Record<string, string>;
   planMode?: boolean | null;
   permissionModeId?: string | null;
   reasoningEffort?: string | null;
@@ -560,6 +563,7 @@ export interface AgentActivityInteraction {
 
 export type AgentActivitySessionSettings = {
   model?: string | null;
+  modelParameters?: Record<string, string>;
   permissionModeId?: string | null;
   planMode?: boolean | null;
   browserUse?: boolean | null;

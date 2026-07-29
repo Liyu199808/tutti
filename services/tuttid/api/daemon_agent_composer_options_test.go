@@ -37,3 +37,37 @@ func TestGeneratedComposerConfigOptionKeepsRequestedProvenance(t *testing.T) {
 		t.Fatalf("effective value = %#v, want resolved Haiku model", generated.EffectiveValue)
 	}
 }
+
+func TestGeneratedModelParameterProfilesKeepSourceScopeAndCurrentOnlyValues(t *testing.T) {
+	generated := generatedAgentProviderModelParameterProfiles([]agentservice.ComposerModelParameterProfile{
+		{
+			ModelID: "composer-2.5[context=1m,experimental=future]", BaseModelID: "composer-2.5",
+			Parameters: []agentservice.ComposerModelParameterCapability{
+				{
+					ID: "context", Semantic: "context", Source: "acp", PreferenceScope: "baseModel",
+					Availability: "supported", Configurable: true, CurrentValue: "1m",
+					Options: []agentservice.ComposerConfigOptionValue{
+						{ID: "200k", Label: "200K", Value: "200k"},
+						{ID: "1m", Label: "1M", Value: "1m"},
+					},
+				},
+				{
+					ID: "experimental", Semantic: "experimental", Source: "parameterized-model",
+					PreferenceScope: "baseModel", Availability: "unknown", CurrentValue: "future",
+				},
+			},
+		},
+	})
+	if len(generated) != 1 || len(generated[0].Parameters) != 2 {
+		t.Fatalf("generated profiles = %#v", generated)
+	}
+	contextParameter := generated[0].Parameters[0]
+	if contextParameter.Source != "acp" || contextParameter.PreferenceScope != "baseModel" ||
+		contextParameter.CurrentValue == nil || *contextParameter.CurrentValue != "1m" || len(contextParameter.Options) != 2 {
+		t.Fatalf("context parameter = %#v", contextParameter)
+	}
+	unknown := generated[0].Parameters[1]
+	if unknown.Configurable || unknown.CurrentValue == nil || *unknown.CurrentValue != "future" || len(unknown.Options) != 0 {
+		t.Fatalf("current-only unknown parameter = %#v", unknown)
+	}
+}

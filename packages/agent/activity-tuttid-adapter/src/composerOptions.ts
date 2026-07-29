@@ -37,6 +37,9 @@ export function agentActivityComposerOptionsFromTuttidResult(
     reasoningOptionsByModel: reasoningOptionsByModelFromValue(
       result.reasoningOptionsByModel
     ),
+    modelParameterProfiles: modelParameterProfilesFromValue(
+      result.modelParameterProfiles
+    ),
     speeds: speedsFromConfig,
     modelConfigurable: modelConfig.configurable === true,
     effectiveModel: normalizeText(modelConfig.effectiveValue),
@@ -202,14 +205,77 @@ function composerSettingsFromValue(
   if (Object.keys(settings).length === 0) {
     return null;
   }
+  const modelParameters = stringRecordFromValue(settings.modelParameters);
   return {
     model: normalizeText(settings.model),
+    ...(modelParameters ? { modelParameters } : {}),
     reasoningEffort: normalizeText(settings.reasoningEffort),
     speed: normalizeText(settings.speed),
     planMode:
       typeof settings.planMode === "boolean" ? settings.planMode : undefined,
     permissionModeId: normalizeText(settings.permissionModeId)
   };
+}
+
+function modelParameterProfilesFromValue(
+  value: unknown
+): NonNullable<AgentActivityComposerOptions["modelParameterProfiles"]> {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((rawProfile) => {
+    const profile = recordValue(rawProfile);
+    const modelId = normalizeText(profile.modelId);
+    const baseModelId = normalizeText(profile.baseModelId);
+    if (!modelId || !baseModelId) return [];
+    const parameters = Array.isArray(profile.parameters)
+      ? profile.parameters.flatMap((rawParameter) => {
+          const parameter = recordValue(rawParameter);
+          const id = normalizeText(parameter.id);
+          const semantic = normalizeText(parameter.semantic);
+          const source = normalizeText(parameter.source);
+          const preferenceScope = normalizeText(parameter.preferenceScope);
+          const availability = normalizeText(parameter.availability);
+          if (
+            !id ||
+            !semantic ||
+            !source ||
+            !preferenceScope ||
+            !availability
+          ) {
+            return [];
+          }
+          return [
+            {
+              id,
+              semantic,
+              source,
+              preferenceScope,
+              availability,
+              configurable: parameter.configurable === true,
+              currentValue: opaqueText(parameter.currentValue),
+              defaultValue: opaqueText(parameter.defaultValue),
+              options: settingOptionsFromRawOptions(parameter.options, {
+                labelKeys: ["name", "label", "displayName"],
+                valueKeys: ["value", "id"]
+              })
+            }
+          ];
+        })
+      : [];
+    return [{ modelId, baseModelId, parameters }];
+  });
+}
+
+function opaqueText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function stringRecordFromValue(value: unknown): Record<string, string> | null {
+  const record = recordValue(value);
+  const entries = Object.entries(record).flatMap(([key, raw]) => {
+    const selected = typeof raw === "string" ? raw : null;
+    return key.trim() && selected?.trim() ? ([[key, selected]] as const) : [];
+  });
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
 }
 
 function slashCommandPolicyFromValue(

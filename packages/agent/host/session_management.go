@@ -362,8 +362,22 @@ func normalizedSessionRef(ref SessionRef) SessionRef {
 }
 
 func applyComposerSettingsPatch(settings ComposerSettings, patch ComposerSettingsPatch) ComposerSettings {
+	settings.ModelParameters = cloneModelParameterValues(settings.ModelParameters)
 	if patch.Model != nil {
 		settings.Model = strings.TrimSpace(*patch.Model)
+	}
+	for key, value := range patch.ModelParameters {
+		if strings.TrimSpace(key) == "" {
+			continue
+		}
+		if value == nil || strings.TrimSpace(*value) == "" {
+			delete(settings.ModelParameters, key)
+			continue
+		}
+		if settings.ModelParameters == nil {
+			settings.ModelParameters = map[string]string{}
+		}
+		settings.ModelParameters[key] = *value
 	}
 	if patch.PermissionModeID != nil {
 		settings.PermissionModeID = strings.TrimSpace(*patch.PermissionModeID)
@@ -386,4 +400,20 @@ func applyComposerSettingsPatch(settings ComposerSettings, patch ComposerSetting
 		settings.Speed = strings.TrimSpace(*patch.Speed)
 	}
 	return settings
+}
+
+func cloneModelParameterValues(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(values))
+	for key, value := range values {
+		if strings.TrimSpace(key) != "" && strings.TrimSpace(value) != "" {
+			result[key] = value
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }

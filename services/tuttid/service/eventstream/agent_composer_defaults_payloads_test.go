@@ -17,6 +17,9 @@ func TestAgentComposerDefaultsPayloadValidation(t *testing.T) {
 		{name: "permission null", payload: `{"agentTargetId":"local:codex","patch":{"permissionModeId":null}}`, valid: true},
 		{name: "reasoning", payload: `{"agentTargetId":"local:codex","patch":{"reasoningEffort":"high"}}`, valid: true},
 		{name: "speed", payload: `{"agentTargetId":"local:codex","patch":{"speed":"fast"}}`, valid: true},
+		{name: "model parameters", payload: `{"agentTargetId":"local:cursor","patch":{"modelParameters":{"baseModelId":"composer-2.5","values":{"context":"1m","future":null}}}}`, valid: true},
+		{name: "model parameters missing base", payload: `{"agentTargetId":"local:cursor","patch":{"modelParameters":{"baseModelId":" ","values":{"context":"1m"}}}}`, valid: false},
+		{name: "mixed scalar and model parameters", payload: `{"agentTargetId":"local:cursor","patch":{"speed":"fast","modelParameters":{"baseModelId":"composer-2.5","values":{"context":"1m"}}}}`, valid: false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

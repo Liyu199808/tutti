@@ -21,7 +21,11 @@ describe("agent gui workbench state", () => {
     ).toBe("unsupported");
     expect(
       normalizeAgentGuiWorkbenchNodeState({
-        composerOverrides: { model: "gpt-5" },
+        composerOverrides: {
+          model: "gpt-5",
+          modelParameters: { " context ": " 1m " },
+          speed: "fast"
+        },
         composerOverridesByAgentTargetId: {
           "target-a": { model: "target-model" }
         },
@@ -38,7 +42,11 @@ describe("agent gui workbench state", () => {
       })
     ).toEqual({
       ...createDefaultAgentGuiWorkbenchNodeState("openclaw"),
-      composerOverrides: { model: "gpt-5" },
+      composerOverrides: {
+        model: "gpt-5",
+        modelParameters: { " context ": " 1m " },
+        speed: "fast"
+      },
       composerOverridesByAgentTargetId: {
         "target-a": { model: "target-model" }
       },

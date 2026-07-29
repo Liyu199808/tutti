@@ -18,6 +18,9 @@ func composerSettingsToPayload(settings ComposerSettings) map[string]any {
 	if model := strings.TrimSpace(settings.Model); model != "" {
 		payload["model"] = model
 	}
+	if modelParameters := cloneStringValues(settings.ModelParameters); len(modelParameters) > 0 {
+		payload["modelParameters"] = modelParameters
+	}
 	if permissionModeID := strings.TrimSpace(settings.PermissionModeID); permissionModeID != "" {
 		payload["permissionModeId"] = permissionModeID
 	}
@@ -57,6 +60,7 @@ func composerSettingsToStatePayload(settings ComposerSettings) map[string]any {
 func composerSettingsFromPayload(payload map[string]any) ComposerSettings {
 	settings := ComposerSettings{
 		Model:            payloadString(payload, "model"),
+		ModelParameters:  payloadStringMap(payload, "modelParameters"),
 		PermissionModeID: payloadString(payload, "permissionModeId"),
 		PlanMode:         payloadBool(payload, "planMode"),
 		ReasoningEffort:  payloadString(payload, "reasoningEffort"),
@@ -72,6 +76,7 @@ func composerSettingsFromPayload(payload map[string]any) ComposerSettings {
 
 func composerSettingsIsEmpty(settings ComposerSettings) bool {
 	return strings.TrimSpace(settings.Model) == "" &&
+		len(settings.ModelParameters) == 0 &&
 		strings.TrimSpace(settings.PermissionModeID) == "" &&
 		strings.TrimSpace(settings.ReasoningEffort) == "" &&
 		strings.TrimSpace(settings.Speed) == "" &&
@@ -101,6 +106,7 @@ func createSessionInputFromPersisted(session PersistedSession) CreateSessionInpu
 		input.Title = &title
 	}
 	settings := session.Settings
+	input.ModelParameters = cloneStringValues(settings.ModelParameters)
 	if model := strings.TrimSpace(settings.Model); model != "" {
 		input.Model = &model
 	}
@@ -138,4 +144,24 @@ func createSessionInputFromPersisted(session PersistedSession) CreateSessionInpu
 		input.ExternalRolloutSourcePath = strings.TrimSpace(sourcePath)
 	}
 	return input
+}
+
+func payloadStringMap(payload map[string]any, key string) map[string]string {
+	if len(payload) == 0 {
+		return nil
+	}
+	result := map[string]string{}
+	switch values := payload[key].(type) {
+	case map[string]string:
+		for name, value := range values {
+			result[name] = value
+		}
+	case map[string]any:
+		for name, raw := range values {
+			if value, ok := raw.(string); ok {
+				result[name] = value
+			}
+		}
+	}
+	return cloneStringValues(result)
 }

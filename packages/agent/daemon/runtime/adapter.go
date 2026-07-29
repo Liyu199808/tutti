@@ -309,6 +309,14 @@ type LiveSettingsAdapter interface {
 	ApplySessionSettings(context.Context, Session, SessionSettingsPatch) error
 }
 
+// ModelParameterSettingsAdapter marks adapters that can confirm opaque model
+// parameter patches with the live runtime. The controller rejects these
+// patches for other adapters so it cannot persist an unverified value.
+type ModelParameterSettingsAdapter interface {
+	LiveSettingsAdapter
+	SupportsModelParameterSettings()
+}
+
 // SessionSettingsValidationAdapter validates a settings patch against live
 // runtime facts before the controller mutates or applies any part of it.
 type SessionSettingsValidationAdapter interface {

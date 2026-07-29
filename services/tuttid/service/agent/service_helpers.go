@@ -146,6 +146,7 @@ func cloneComposerSettingsPointer(settings *ComposerSettings) *ComposerSettings 
 		return nil
 	}
 	cloned := *settings
+	cloned.ModelParameters = cloneStringValues(settings.ModelParameters)
 	if composerSettingsIsEmpty(cloned) {
 		return nil
 	}
@@ -153,6 +154,7 @@ func cloneComposerSettingsPointer(settings *ComposerSettings) *ComposerSettings 
 }
 
 func cloneComposerSettings(settings ComposerSettings) ComposerSettings {
+	settings.ModelParameters = cloneStringValues(settings.ModelParameters)
 	return settings
 }
 
@@ -160,7 +162,23 @@ func cloneComposerSettingsPointerValue(settings *ComposerSettings) ComposerSetti
 	if settings == nil {
 		return ComposerSettings{}
 	}
-	return *settings
+	return cloneComposerSettings(*settings)
+}
+
+func cloneStringValues(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(values))
+	for key, value := range values {
+		if strings.TrimSpace(key) != "" && strings.TrimSpace(value) != "" {
+			result[key] = value
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 func payloadString(payload map[string]any, key string) string {

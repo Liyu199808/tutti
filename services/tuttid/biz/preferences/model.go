@@ -80,10 +80,11 @@ type DesktopPreferences struct {
 }
 
 type AgentComposerDefaults struct {
-	Model            string
-	PermissionModeID string
-	ReasoningEffort  string
-	Speed            string
+	Model                      string
+	PermissionModeID           string
+	ReasoningEffort            string
+	Speed                      string
+	ModelParametersByBaseModel map[string]map[string]string
 }
 
 const (
@@ -98,8 +99,13 @@ const (
 // left unchanged.
 type AgentComposerDefaultsPatch map[string]*string
 
+// AgentModelParametersPatch is one sparse base-model memory mutation. Values
+// are opaque; nil clears one key and absent keys are preserved.
+type AgentModelParametersPatch map[string]*string
+
 func (d AgentComposerDefaults) IsZero() bool {
-	return d.Model == "" && d.PermissionModeID == "" && d.ReasoningEffort == "" && d.Speed == ""
+	return d.Model == "" && d.PermissionModeID == "" && d.ReasoningEffort == "" && d.Speed == "" &&
+		len(d.ModelParametersByBaseModel) == 0
 }
 
 // LocalAgentTargetIDForProvider maps a provider to the id of its built-in

@@ -1074,6 +1074,7 @@ test("desktop agent activity adapter sends plan mode when creating sessions", as
       source: "agent-gui"
     },
     model: "gpt-5.5-codex-spark",
+    modelParameters: { context: "1m", future: "opaque" },
     permissionModeId: "read-only",
     planMode: true,
     reasoningEffort: "high",
@@ -1099,6 +1100,7 @@ test("desktop agent activity adapter sends plan mode when creating sessions", as
           source: "agent-gui"
         },
         model: "gpt-5.5-codex-spark",
+        modelParameters: { context: "1m", future: "opaque" },
         noProject: null,
         permissionModeId: "read-only",
         planMode: true,

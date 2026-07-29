@@ -22,17 +22,28 @@ type AgentComposerDefaultsPatchValidator interface {
 	ValidateAgentComposerDefaultsPatch(context.Context, string, preferencesbiz.AgentComposerDefaultsPatch) error
 }
 
+type AgentModelParametersPatchValidator interface {
+	ValidateAgentModelParametersPatch(context.Context, string, string, preferencesbiz.AgentModelParametersPatch) error
+}
+
 type Service struct {
 	Store                          workspacedata.PreferencesStore
 	Publisher                      DesktopPreferencesPublisher
 	AfterPut                       func(context.Context, preferencesbiz.DesktopPreferences, preferencesbiz.DesktopPreferences)
 	AgentComposerDefaultsPublisher AgentComposerDefaultsPublisher
 	AgentComposerDefaultsValidator AgentComposerDefaultsPatchValidator
+	AgentModelParametersValidator  AgentModelParametersPatchValidator
 }
 
 type PatchAgentComposerDefaultsForTargetInput struct {
 	AgentTargetID string
 	Patch         preferencesbiz.AgentComposerDefaultsPatch
+}
+
+type PatchAgentModelParametersForTargetInput struct {
+	AgentTargetID string
+	BaseModelID   string
+	Patch         preferencesbiz.AgentModelParametersPatch
 }
 
 type PutInput struct {
@@ -114,6 +125,44 @@ func (s Service) PatchAgentComposerDefaultsForTarget(
 		return preferencesbiz.AgentComposerDefaults{}, errors.New("agent composer defaults patch store is not configured")
 	}
 	defaults, err := patchStore.PatchAgentComposerDefaultsForTarget(ctx, agentTargetID, patch)
+	if err != nil {
+		return preferencesbiz.AgentComposerDefaults{}, err
+	}
+	if s.AgentComposerDefaultsPublisher != nil {
+		if err := s.AgentComposerDefaultsPublisher.PublishAgentComposerDefaultsChanged(ctx, agentTargetID); err != nil {
+			return preferencesbiz.AgentComposerDefaults{}, err
+		}
+	}
+	return defaults, nil
+}
+
+func (s Service) PatchAgentModelParametersForTarget(
+	ctx context.Context,
+	input PatchAgentModelParametersForTargetInput,
+) (preferencesbiz.AgentComposerDefaults, error) {
+	if s.Store == nil {
+		return preferencesbiz.AgentComposerDefaults{}, errors.New("desktop preferences store is not configured")
+	}
+	agentTargetID := strings.TrimSpace(input.AgentTargetID)
+	baseModelID := strings.TrimSpace(input.BaseModelID)
+	patch, err := normalizeAgentModelParametersPatch(input.Patch)
+	if err != nil {
+		return preferencesbiz.AgentComposerDefaults{}, err
+	}
+	if agentTargetID == "" || baseModelID == "" {
+		return preferencesbiz.AgentComposerDefaults{}, errors.New("agent target id and base model id are required")
+	}
+	if s.AgentModelParametersValidator == nil {
+		return preferencesbiz.AgentComposerDefaults{}, errors.New("agent model parameters validator is not configured")
+	}
+	if err := s.AgentModelParametersValidator.ValidateAgentModelParametersPatch(ctx, agentTargetID, baseModelID, patch); err != nil {
+		return preferencesbiz.AgentComposerDefaults{}, err
+	}
+	patchStore, ok := s.Store.(workspacedata.AgentComposerDefaultsPatchStore)
+	if !ok {
+		return preferencesbiz.AgentComposerDefaults{}, errors.New("agent composer defaults patch store is not configured")
+	}
+	defaults, err := patchStore.PatchAgentModelParametersForTarget(ctx, agentTargetID, baseModelID, patch)
 	if err != nil {
 		return preferencesbiz.AgentComposerDefaults{}, err
 	}
@@ -207,6 +256,31 @@ func normalizeAgentComposerDefaultsPatch(
 			return nil, errors.New("agent composer defaults patch values must be non-empty or null")
 		}
 		result[field] = &normalized
+	}
+	return result, nil
+}
+
+func normalizeAgentModelParametersPatch(
+	input preferencesbiz.AgentModelParametersPatch,
+) (preferencesbiz.AgentModelParametersPatch, error) {
+	if len(input) == 0 {
+		return nil, errors.New("agent model parameters patch is empty")
+	}
+	result := make(preferencesbiz.AgentModelParametersPatch, len(input))
+	for parameterID, value := range input {
+		parameterID = strings.TrimSpace(parameterID)
+		if parameterID == "" {
+			return nil, errors.New("agent model parameter id is required")
+		}
+		if value == nil {
+			result[parameterID] = nil
+			continue
+		}
+		if strings.TrimSpace(*value) == "" {
+			return nil, errors.New("agent model parameter values must be non-empty or null")
+		}
+		selected := *value
+		result[parameterID] = &selected
 	}
 	return result, nil
 }

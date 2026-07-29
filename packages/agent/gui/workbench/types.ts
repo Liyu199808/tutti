@@ -29,6 +29,7 @@ export interface AgentGuiWorkbenchPrefillPromptPayload {
 
 export interface AgentGuiWorkbenchComposerOverrides {
   model?: string | null;
+  modelParameters?: Record<string, string>;
   modelPlanId?: string | null;
   permissionModeId?: string | null;
   planMode?: boolean;

@@ -21,6 +21,7 @@ test("maps daemon composer options into the canonical activity contract", () => 
     permissionConfig: { configurable: false, modes: [] },
     reasoningConfig: { configurable: false, options: [] },
     reasoningOptionsByModel: {},
+    modelParameterProfiles: [],
     runtimeContext: {},
     commands: [],
     skills: [],

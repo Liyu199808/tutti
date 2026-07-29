@@ -379,6 +379,14 @@ func TestSQLiteStorePatchAgentComposerDefaultsForTargetMergesLatestFieldsAndPres
 	}); err != nil {
 		t.Fatalf("patch remaining fields: %v", err)
 	}
+	contextWindow := "1m"
+	modelReasoning := "high"
+	if _, err := store.PatchAgentModelParametersForTarget(ctx, "local:opencode", "openai/gpt-5", preferencesbiz.AgentModelParametersPatch{
+		"context":   &contextWindow,
+		"reasoning": &modelReasoning,
+	}); err != nil {
+		t.Fatalf("patch per-model parameters: %v", err)
+	}
 	otherModel := "claude-sonnet-4"
 	if _, err := store.PatchAgentComposerDefaultsForTarget(ctx, "local:claude-code", preferencesbiz.AgentComposerDefaultsPatch{
 		preferencesbiz.AgentComposerDefaultsFieldModel: &otherModel,
@@ -399,6 +407,10 @@ func TestSQLiteStorePatchAgentComposerDefaultsForTargetMergesLatestFieldsAndPres
 	opencode := got.AgentComposerDefaultsByAgentTarget["local:opencode"]
 	if opencode.Model != model || opencode.PermissionModeID != permission || opencode.ReasoningEffort != reasoning || opencode.Speed != speed {
 		t.Fatalf("opencode defaults = %#v", opencode)
+	}
+	if opencode.ModelParametersByBaseModel["openai/gpt-5"]["context"] != "1m" ||
+		opencode.ModelParametersByBaseModel["openai/gpt-5"]["reasoning"] != "high" {
+		t.Fatalf("opencode model parameter defaults = %#v", opencode.ModelParametersByBaseModel)
 	}
 	if got.AgentComposerDefaultsByAgentTarget["local:claude-code"].Model != otherModel {
 		t.Fatalf("target defaults = %#v", got.AgentComposerDefaultsByAgentTarget)

@@ -103,6 +103,7 @@ function composerOptions(input: {
     ) as unknown as AgentActivitySessionCapabilities,
     models: [],
     reasoningEfforts: [],
+    modelParameterProfiles: [],
     speeds: [],
     permissionConfig: null,
     capabilityCatalog: [],

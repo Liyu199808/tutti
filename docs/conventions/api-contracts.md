@@ -168,6 +168,15 @@ Rules:
 while response `effectiveSettings` is the only contract for resolved homepage
 composer defaults.
 
+`modelParameterProfiles` is the typed per-model capability contract. The daemon
+resolves source precedence and returns `modelId`, `baseModelId`, source,
+preference scope, availability, configurable state, current/default values, and
+options. `currentValue` may be present without options; clients preserve and
+display it but must not invent candidates. Additional accepted Session values
+round-trip through `effectiveSettings.modelParameters`. The settings update DTO
+uses a separate sparse patch shape so null removes one parameter while omitted
+unknown parameters survive.
+
 ## Desktop Agent Conversation Detail Mode
 
 `agentConversationDetailMode` is a global desktop preference, not a provider-specific

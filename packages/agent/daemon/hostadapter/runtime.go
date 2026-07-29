@@ -78,6 +78,7 @@ func (a *RuntimeController) Start(ctx context.Context, input host.RuntimeStartIn
 		PermissionModeID:        input.PermissionModeID,
 		Settings: runtimeSettings(host.ComposerSettings{
 			Model:                  input.Model,
+			ModelParameters:        cloneModelParameterValues(input.ModelParameters),
 			PermissionModeID:       input.PermissionModeID,
 			PlanMode:               input.PlanMode,
 			BrowserUse:             input.BrowserUse,
@@ -213,7 +214,7 @@ func (a *RuntimeController) UpdateSettings(ctx context.Context, input host.Runti
 	_, err := a.Backend.UpdateSettings(ctx, agentruntime.UpdateSettingsInput{
 		RoomID: input.WorkspaceID, AgentSessionID: input.AgentSessionID,
 		Settings: agentruntime.SessionSettingsPatch{
-			Model: input.Settings.Model, ReasoningEffort: input.Settings.ReasoningEffort, Speed: input.Settings.Speed,
+			Model: input.Settings.Model, ModelParameters: cloneModelParameterPatch(input.Settings.ModelParameters), ReasoningEffort: input.Settings.ReasoningEffort, Speed: input.Settings.Speed,
 			PlanMode: input.Settings.PlanMode, BrowserUse: input.Settings.BrowserUse,
 			ComputerUse: input.Settings.ComputerUse, PermissionModeID: input.Settings.PermissionModeID,
 		},
@@ -570,7 +571,7 @@ func runtimeTuttiModeSnapshot(input *host.TuttiModeTurnSnapshot) *agentruntime.T
 
 func runtimeSettings(settings host.ComposerSettings) *agentruntime.SessionSettings {
 	return &agentruntime.SessionSettings{
-		Model: settings.Model, ReasoningEffort: settings.ReasoningEffort, Speed: settings.Speed,
+		Model: settings.Model, ModelParameters: cloneModelParameterValues(settings.ModelParameters), ReasoningEffort: settings.ReasoningEffort, Speed: settings.Speed,
 		PlanMode: settings.PlanMode, BrowserUse: settings.BrowserUse, ComputerUse: settings.ComputerUse,
 		PermissionModeID: settings.PermissionModeID, ConversationDetailMode: settings.ConversationDetailMode,
 	}
@@ -578,10 +579,37 @@ func runtimeSettings(settings host.ComposerSettings) *agentruntime.SessionSettin
 
 func hostSettings(settings agentruntime.SessionSettings) host.ComposerSettings {
 	return host.ComposerSettings{
-		Model: settings.Model, ReasoningEffort: settings.ReasoningEffort, Speed: settings.Speed,
+		Model: settings.Model, ModelParameters: cloneModelParameterValues(settings.ModelParameters), ReasoningEffort: settings.ReasoningEffort, Speed: settings.Speed,
 		PlanMode: settings.PlanMode, BrowserUse: settings.BrowserUse, ComputerUse: settings.ComputerUse,
 		PermissionModeID: settings.PermissionModeID, ConversationDetailMode: settings.ConversationDetailMode,
 	}
+}
+
+func cloneModelParameterValues(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(values))
+	for key, value := range values {
+		result[key] = value
+	}
+	return result
+}
+
+func cloneModelParameterPatch(values map[string]*string) map[string]*string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make(map[string]*string, len(values))
+	for key, value := range values {
+		if value == nil {
+			result[key] = nil
+			continue
+		}
+		cloned := *value
+		result[key] = &cloned
+	}
+	return result
 }
 
 func hostTurnLifecyclePointer(input *agentruntime.TurnLifecycle) *host.TurnLifecycle {

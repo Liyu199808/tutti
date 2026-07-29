@@ -208,11 +208,31 @@ func (s *SQLiteStore) PatchAgentComposerDefaultsForTarget(
 	agentTargetID string,
 	patch preferencesbiz.AgentComposerDefaultsPatch,
 ) (preferencesbiz.AgentComposerDefaults, error) {
+	return s.patchAgentComposerDefaultsForTarget(ctx, agentTargetID, patch, "", nil)
+}
+
+func (s *SQLiteStore) PatchAgentModelParametersForTarget(
+	ctx context.Context,
+	agentTargetID string,
+	baseModelID string,
+	patch preferencesbiz.AgentModelParametersPatch,
+) (preferencesbiz.AgentComposerDefaults, error) {
+	return s.patchAgentComposerDefaultsForTarget(ctx, agentTargetID, nil, baseModelID, patch)
+}
+
+func (s *SQLiteStore) patchAgentComposerDefaultsForTarget(
+	ctx context.Context,
+	agentTargetID string,
+	patch preferencesbiz.AgentComposerDefaultsPatch,
+	baseModelID string,
+	modelParametersPatch preferencesbiz.AgentModelParametersPatch,
+) (preferencesbiz.AgentComposerDefaults, error) {
 	if s == nil || s.writeDB == nil {
 		return preferencesbiz.AgentComposerDefaults{}, errors.New("workspace database is not initialized")
 	}
 	agentTargetID = strings.TrimSpace(agentTargetID)
-	if agentTargetID == "" || len(patch) == 0 {
+	baseModelID = strings.TrimSpace(baseModelID)
+	if agentTargetID == "" || (len(patch) == 0 && (baseModelID == "" || len(modelParametersPatch) == 0)) {
 		return preferencesbiz.AgentComposerDefaults{}, errors.New("agent composer defaults patch is empty")
 	}
 
@@ -261,6 +281,33 @@ WHERE id = ?
 			defaults.Speed = next
 		default:
 			return preferencesbiz.AgentComposerDefaults{}, fmt.Errorf("unsupported agent composer defaults field %q", field)
+		}
+	}
+	if len(modelParametersPatch) > 0 {
+		if defaults.ModelParametersByBaseModel == nil {
+			defaults.ModelParametersByBaseModel = map[string]map[string]string{}
+		}
+		values := defaults.ModelParametersByBaseModel[baseModelID]
+		if values == nil {
+			values = map[string]string{}
+		}
+		for parameterID, value := range modelParametersPatch {
+			if strings.TrimSpace(parameterID) == "" {
+				continue
+			}
+			if value == nil || strings.TrimSpace(*value) == "" {
+				delete(values, parameterID)
+				continue
+			}
+			values[parameterID] = *value
+		}
+		if len(values) == 0 {
+			delete(defaults.ModelParametersByBaseModel, baseModelID)
+		} else {
+			defaults.ModelParametersByBaseModel[baseModelID] = values
+		}
+		if len(defaults.ModelParametersByBaseModel) == 0 {
+			defaults.ModelParametersByBaseModel = nil
 		}
 	}
 	if defaults.IsZero() {

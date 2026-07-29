@@ -122,6 +122,31 @@ type ComposerReasoningProfile struct {
 	Options      []ComposerConfigOptionValue
 }
 
+// ComposerModelParameterCapability is one resolved, provider-neutral model
+// setting. Source is audit metadata (for example "acp",
+// "exact-model-preset", "model-family-preset", or "parameterized-model").
+// CurrentValue is intentionally independent from Options: a provider may
+// report a verifiable current value without advertising a selectable range.
+type ComposerModelParameterCapability struct {
+	ID              string
+	Semantic        string
+	Source          string
+	PreferenceScope string
+	Availability    string
+	Configurable    bool
+	CurrentValue    string
+	DefaultValue    string
+	Options         []ComposerConfigOptionValue
+}
+
+// ComposerModelParameterProfile groups resolved parameter capabilities by the
+// exact selectable model while exposing BaseModelID as the durable memory key.
+type ComposerModelParameterProfile struct {
+	ModelID     string
+	BaseModelID string
+	Parameters  []ComposerModelParameterCapability
+}
+
 type ComposerOptions struct {
 	Provider                string
 	Capabilities            []string
@@ -130,6 +155,7 @@ type ComposerOptions struct {
 	PermissionConfig        PermissionConfig
 	ReasoningConfig         ComposerConfigOption
 	ReasoningOptionsByModel map[string]ComposerReasoningProfile
+	ModelParameterProfiles  []ComposerModelParameterProfile
 	SpeedConfig             ComposerConfigOption
 	EffectiveSettings       ComposerSettings
 	RuntimeContext          map[string]any
@@ -175,6 +201,7 @@ func (s *Service) GetComposerOptions(ctx context.Context, input ComposerOptionsI
 	}
 	requestedSettings := ComposerSettings{
 		Model:            strings.TrimSpace(input.Settings.Model),
+		ModelParameters:  cloneStringValues(input.Settings.ModelParameters),
 		PermissionModeID: strings.TrimSpace(input.Settings.PermissionModeID),
 		PlanMode:         input.Settings.PlanMode,
 		BrowserUse:       input.Settings.BrowserUse,
@@ -452,6 +479,17 @@ func mergeComposerSettingsWithDefaults(
 	if strings.TrimSpace(requested.Speed) == "" {
 		requested.Speed = defaults.Speed
 	}
+	baseModelID := strings.TrimSpace(requested.Model)
+	if remembered := defaults.ModelParametersByBaseModel[baseModelID]; len(remembered) > 0 {
+		if requested.ModelParameters == nil {
+			requested.ModelParameters = map[string]string{}
+		}
+		for parameterID, selected := range remembered {
+			if strings.TrimSpace(requested.ModelParameters[parameterID]) == "" {
+				requested.ModelParameters[parameterID] = selected
+			}
+		}
+	}
 	return requested
 }
 
@@ -466,6 +504,7 @@ func resolveComposerEffectiveSettings(
 ) ComposerSettings {
 	effective := ComposerSettings{
 		Model:            strings.TrimSpace(defaultModel),
+		ModelParameters:  cloneStringValues(requested.ModelParameters),
 		PermissionModeID: defaultPermissionModeIDForProvider(provider),
 		ReasoningEffort:  composerDefaultReasoningEffort(provider),
 		Speed:            composerDefaultSpeed(provider),
@@ -580,6 +619,7 @@ func permissionModeOption(provider string, id string, semantic PermissionModeSem
 func normalizeComposerSettingsForProvider(provider string, settings ComposerSettings) ComposerSettings {
 	provider = agentprovider.Normalize(provider)
 	settings.Model = strings.TrimSpace(settings.Model)
+	settings.ModelParameters = cloneStringValues(settings.ModelParameters)
 	settings.PermissionModeID = normalizePermissionModeIDForProvider(provider, settings.PermissionModeID)
 	settings.ReasoningEffort = normalizeReasoningEffortForProvider(provider, settings.ReasoningEffort)
 	settings.Speed = normalizeSpeedForProvider(provider, settings.Speed)
@@ -599,6 +639,7 @@ func normalizeObservedComposerSettingsForProvider(provider string, settings Comp
 		return normalizeComposerSettingsForProvider(provider, settings)
 	}
 	settings.Model = strings.TrimSpace(settings.Model)
+	settings.ModelParameters = cloneStringValues(settings.ModelParameters)
 	settings.PermissionModeID = strings.TrimSpace(settings.PermissionModeID)
 	settings.ReasoningEffort = strings.TrimSpace(settings.ReasoningEffort)
 	settings.Speed = strings.TrimSpace(settings.Speed)

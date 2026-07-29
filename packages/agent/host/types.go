@@ -58,8 +58,14 @@ type SessionTurnQuery struct {
 }
 
 type ComposerSettings struct {
-	Model            string
-	ModelPlanID      string
+	Model       string
+	ModelPlanID string
+	// ModelParameters preserves provider-neutral, model-scoped settings that
+	// do not have a legacy first-class ComposerSettings field. Keys are stable
+	// parameter ids from the composer capability contract and values are opaque
+	// provider-confirmed selections. Callers must not infer candidate ranges
+	// from a current value.
+	ModelParameters  map[string]string
 	PermissionModeID string
 	PlanMode         bool
 	// BrowserUse is tri-state: nil means "use the default" (on), so the
@@ -74,7 +80,11 @@ type ComposerSettings struct {
 }
 
 type ComposerSettingsPatch struct {
-	Model            *string
+	Model *string
+	// ModelParameters is a sparse patch. A nil value removes one parameter;
+	// absent keys are preserved. This lets newer adapters round-trip unknown
+	// parameters without replacing the complete map.
+	ModelParameters  map[string]*string
 	PermissionModeID *string
 	PlanMode         *bool
 	BrowserUse       *bool
@@ -230,6 +240,7 @@ type RuntimeStartInput struct {
 	InitialTitleEstablished bool
 	PermissionModeID        string
 	Model                   string
+	ModelParameters         map[string]string
 	PlanMode                bool
 	BrowserUse              *bool
 	ComputerUse             *bool
@@ -470,6 +481,7 @@ type CreateSessionInput struct {
 	Cwd                    *string
 	PermissionModeID       *string
 	Model                  *string
+	ModelParameters        map[string]string
 	PlanMode               *bool
 	BrowserUse             *bool
 	ComputerUse            *bool

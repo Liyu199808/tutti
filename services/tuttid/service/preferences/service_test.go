@@ -12,6 +12,8 @@ type preferencesStoreStub struct {
 	getResult        preferencesbiz.DesktopPreferences
 	patchAgentTarget string
 	patchInput       preferencesbiz.AgentComposerDefaultsPatch
+	patchBaseModelID string
+	modelPatchInput  preferencesbiz.AgentModelParametersPatch
 	patchResult      preferencesbiz.AgentComposerDefaults
 	putInput         preferencesbiz.DesktopPreferences
 }
@@ -36,9 +38,29 @@ func (s *preferencesStoreStub) PatchAgentComposerDefaultsForTarget(_ context.Con
 	return s.patchResult, nil
 }
 
+func (s *preferencesStoreStub) PatchAgentModelParametersForTarget(_ context.Context, agentTargetID string, baseModelID string, patch preferencesbiz.AgentModelParametersPatch) (preferencesbiz.AgentComposerDefaults, error) {
+	s.patchAgentTarget = agentTargetID
+	s.patchBaseModelID = baseModelID
+	s.modelPatchInput = patch
+	return s.patchResult, nil
+}
+
 type agentComposerDefaultsValidatorStub struct {
 	agentTargetID string
 	patch         preferencesbiz.AgentComposerDefaultsPatch
+}
+
+type agentModelParametersValidatorStub struct {
+	agentTargetID string
+	baseModelID   string
+	patch         preferencesbiz.AgentModelParametersPatch
+}
+
+func (s *agentModelParametersValidatorStub) ValidateAgentModelParametersPatch(_ context.Context, agentTargetID string, baseModelID string, patch preferencesbiz.AgentModelParametersPatch) error {
+	s.agentTargetID = agentTargetID
+	s.baseModelID = baseModelID
+	s.patch = patch
+	return nil
 }
 
 func (s *agentComposerDefaultsValidatorStub) ValidateAgentComposerDefaultsPatch(_ context.Context, agentTargetID string, patch preferencesbiz.AgentComposerDefaultsPatch) error {
@@ -586,6 +608,37 @@ func TestServicePatchAgentComposerDefaultsForTargetValidatesStoresAndInvalidates
 	}
 	if len(publisher.agentTargetIDs) != 1 || publisher.agentTargetIDs[0] != "local:codex" {
 		t.Fatalf("invalidations = %#v", publisher.agentTargetIDs)
+	}
+}
+
+func TestServicePatchAgentModelParametersForTargetUsesBaseModelScope(t *testing.T) {
+	t.Parallel()
+
+	store := &preferencesStoreStub{patchResult: preferencesbiz.AgentComposerDefaults{
+		ModelParametersByBaseModel: map[string]map[string]string{"composer-2.5": {"context": "1m"}},
+	}}
+	validator := &agentModelParametersValidatorStub{}
+	publisher := &agentComposerDefaultsPublisherStub{}
+	service := Service{
+		Store: store, AgentModelParametersValidator: validator,
+		AgentComposerDefaultsPublisher: publisher,
+	}
+	contextWindow := " 1m "
+	result, err := service.PatchAgentModelParametersForTarget(context.Background(), PatchAgentModelParametersForTargetInput{
+		AgentTargetID: " local:cursor ", BaseModelID: " composer-2.5 ",
+		Patch: preferencesbiz.AgentModelParametersPatch{"context": &contextWindow},
+	})
+	if err != nil {
+		t.Fatalf("PatchAgentModelParametersForTarget() error = %v", err)
+	}
+	if result.ModelParametersByBaseModel["composer-2.5"]["context"] != "1m" ||
+		store.patchAgentTarget != "local:cursor" || store.patchBaseModelID != "composer-2.5" ||
+		*store.modelPatchInput["context"] != " 1m " {
+		t.Fatalf("result=%#v store=%#v", result, store)
+	}
+	if validator.agentTargetID != "local:cursor" || validator.baseModelID != "composer-2.5" ||
+		len(publisher.agentTargetIDs) != 1 || publisher.agentTargetIDs[0] != "local:cursor" {
+		t.Fatalf("validator=%#v invalidations=%#v", validator, publisher.agentTargetIDs)
 	}
 }
 

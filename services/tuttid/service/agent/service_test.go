@@ -4304,6 +4304,36 @@ func TestServiceUpdateSettingsPreservesCodexModelCatalogReasoningEffort(t *testi
 	}
 }
 
+func TestServiceUpdateSettingsPersistsModelParametersOnlyAfterRuntimeAcceptance(t *testing.T) {
+	runtime := newFakeRuntime()
+	runtime.updateSettingsErr = errors.New("ACP rejected context")
+	runtime.sessions["ws-1:session-1"] = ProviderRuntimeSession{
+		ID: "session-1", Provider: "cursor", WorkspaceID: "ws-1", Status: "ready",
+		Settings: &ComposerSettings{
+			Model: "composer-2.5", ModelParameters: map[string]string{"context": "200k", "future": "opaque-current"},
+		},
+	}
+	service := newIsolatedAgentService(runtime)
+	seedPersistedLiveSettingsSession(service, runtime.sessions["ws-1:session-1"])
+	contextWindow := "1m"
+
+	_, err := service.UpdateSettings(context.Background(), "ws-1", "session-1", ComposerSettingsPatch{
+		ModelParameters: map[string]*string{"context": &contextWindow},
+	})
+	if err == nil || !strings.Contains(err.Error(), "ACP rejected context") {
+		t.Fatalf("UpdateSettings error = %v", err)
+	}
+	persisted, found := service.SessionReader.(*fakeSessionReader).GetSession("ws-1", "session-1")
+	if !found || persisted.Settings.ModelParameters["context"] != "200k" ||
+		persisted.Settings.ModelParameters["future"] != "opaque-current" {
+		t.Fatalf("persisted settings after rejection = %#v", persisted.Settings)
+	}
+	live, found := runtime.Session("ws-1", "session-1")
+	if !found || live.Settings == nil || live.Settings.ModelParameters["context"] != "200k" {
+		t.Fatalf("live settings after rejection = %#v", live.Settings)
+	}
+}
+
 func TestServiceUpdateSettingsPreservesAdvertisedReasoningEffort(t *testing.T) {
 	for _, effort := range []string{"minimal", "none"} {
 		t.Run(effort, func(t *testing.T) {
@@ -7132,6 +7162,7 @@ type fakeRuntime struct {
 	startCalls             []RuntimeStartInput
 	startHook              func(RuntimeStartInput, ProviderRuntimeSession) ProviderRuntimeSession
 	updateSettingsCalls    []RuntimeUpdateSettingsInput
+	updateSettingsErr      error
 	closeHook              func(RuntimeCloseInput)
 	validateErr            error
 	validateCalls          []RuntimeExecInput
@@ -7684,6 +7715,9 @@ func (f *fakeRuntime) InteractiveDisposition(string, string, string, string, str
 
 func (f *fakeRuntime) UpdateSettings(_ context.Context, input RuntimeUpdateSettingsInput) error {
 	f.updateSettingsCalls = append(f.updateSettingsCalls, input)
+	if f.updateSettingsErr != nil {
+		return f.updateSettingsErr
+	}
 	key := input.WorkspaceID + ":" + input.AgentSessionID
 	session, ok := f.sessions[key]
 	if !ok {
@@ -7695,6 +7729,21 @@ func (f *fakeRuntime) UpdateSettings(_ context.Context, input RuntimeUpdateSetti
 	}
 	if input.Settings.Model != nil {
 		settings.Model = strings.TrimSpace(*input.Settings.Model)
+	}
+	settings.ModelParameters = cloneStringValues(settings.ModelParameters)
+	for parameterID, selected := range input.Settings.ModelParameters {
+		parameterID = strings.TrimSpace(parameterID)
+		if parameterID == "" {
+			continue
+		}
+		if selected == nil || strings.TrimSpace(*selected) == "" {
+			delete(settings.ModelParameters, parameterID)
+			continue
+		}
+		if settings.ModelParameters == nil {
+			settings.ModelParameters = map[string]string{}
+		}
+		settings.ModelParameters[parameterID] = strings.TrimSpace(*selected)
 	}
 	if input.Settings.PermissionModeID != nil {
 		settings.PermissionModeID = strings.TrimSpace(*input.Settings.PermissionModeID)

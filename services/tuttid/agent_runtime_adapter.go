@@ -108,6 +108,7 @@ func (a agentRuntimeAdapter) GoalRecoveryPolicy(ctx context.Context, input agent
 func agentRuntimeSessionSettings(settings agentservice.ComposerSettings) *agentruntime.SessionSettings {
 	result := &agentruntime.SessionSettings{
 		Model:                  settings.Model,
+		ModelParameters:        cloneAgentModelParameterValues(settings.ModelParameters),
 		ReasoningEffort:        settings.ReasoningEffort,
 		Speed:                  settings.Speed,
 		PlanMode:               settings.PlanMode,
@@ -350,6 +351,7 @@ func (a agentRuntimeAdapter) UpdateSettings(ctx context.Context, input agentserv
 		AgentSessionID: input.AgentSessionID,
 		Settings: agentruntime.SessionSettingsPatch{
 			Model:            input.Settings.Model,
+			ModelParameters:  cloneAgentModelParameterPatch(input.Settings.ModelParameters),
 			ReasoningEffort:  input.Settings.ReasoningEffort,
 			Speed:            input.Settings.Speed,
 			PlanMode:         input.Settings.PlanMode,
@@ -437,6 +439,7 @@ func (a agentRuntimeAdapter) Start(ctx context.Context, input agentservice.Runti
 		PermissionModeID:        input.PermissionModeID,
 		Settings: &agentruntime.SessionSettings{
 			Model:                  input.Model,
+			ModelParameters:        cloneAgentModelParameterValues(input.ModelParameters),
 			ReasoningEffort:        input.ReasoningEffort,
 			Speed:                  input.Speed,
 			PlanMode:               input.PlanMode,
@@ -549,6 +552,7 @@ func agentRuntimeComposerSettings(settings *agentruntime.SessionSettings) *agent
 	}
 	return &agentservice.ComposerSettings{
 		Model:                  settings.Model,
+		ModelParameters:        cloneAgentModelParameterValues(settings.ModelParameters),
 		PermissionModeID:       settings.PermissionModeID,
 		PlanMode:               settings.PlanMode,
 		BrowserUse:             cloneOptionalBool(settings.BrowserUse),
@@ -567,6 +571,33 @@ func cloneRuntimeContext(value map[string]any) map[string]any {
 		cloned[key] = cloneRuntimeContextValue(item)
 	}
 	return cloned
+}
+
+func cloneAgentModelParameterValues(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(values))
+	for key, value := range values {
+		result[key] = value
+	}
+	return result
+}
+
+func cloneAgentModelParameterPatch(values map[string]*string) map[string]*string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make(map[string]*string, len(values))
+	for key, value := range values {
+		if value == nil {
+			result[key] = nil
+			continue
+		}
+		cloned := *value
+		result[key] = &cloned
+	}
+	return result
 }
 
 func cloneRuntimeContextValue(value any) any {

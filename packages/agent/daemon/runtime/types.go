@@ -281,24 +281,26 @@ type UpdateSettingsInput struct {
 }
 
 type SessionSettings struct {
-	Model                  string `json:"model,omitempty"`
-	ReasoningEffort        string `json:"reasoningEffort,omitempty"`
-	Speed                  string `json:"speed,omitempty"`
-	PlanMode               bool   `json:"planMode,omitempty"`
-	BrowserUse             *bool  `json:"browserUse,omitempty"`
-	ComputerUse            *bool  `json:"computerUse,omitempty"`
-	PermissionModeID       string `json:"permissionModeId,omitempty"`
-	ConversationDetailMode string `json:"conversationDetailMode,omitempty"`
+	Model                  string            `json:"model,omitempty"`
+	ModelParameters        map[string]string `json:"modelParameters,omitempty"`
+	ReasoningEffort        string            `json:"reasoningEffort,omitempty"`
+	Speed                  string            `json:"speed,omitempty"`
+	PlanMode               bool              `json:"planMode,omitempty"`
+	BrowserUse             *bool             `json:"browserUse,omitempty"`
+	ComputerUse            *bool             `json:"computerUse,omitempty"`
+	PermissionModeID       string            `json:"permissionModeId,omitempty"`
+	ConversationDetailMode string            `json:"conversationDetailMode,omitempty"`
 }
 
 type SessionSettingsPatch struct {
-	Model            *string `json:"model,omitempty"`
-	ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
-	Speed            *string `json:"speed,omitempty"`
-	PlanMode         *bool   `json:"planMode,omitempty"`
-	BrowserUse       *bool   `json:"browserUse,omitempty"`
-	ComputerUse      *bool   `json:"computerUse,omitempty"`
-	PermissionModeID *string `json:"permissionModeId,omitempty"`
+	Model            *string            `json:"model,omitempty"`
+	ModelParameters  map[string]*string `json:"modelParameters,omitempty"`
+	ReasoningEffort  *string            `json:"reasoningEffort,omitempty"`
+	Speed            *string            `json:"speed,omitempty"`
+	PlanMode         *bool              `json:"planMode,omitempty"`
+	BrowserUse       *bool              `json:"browserUse,omitempty"`
+	ComputerUse      *bool              `json:"computerUse,omitempty"`
+	PermissionModeID *string            `json:"permissionModeId,omitempty"`
 }
 
 type PromptContentBlock struct {

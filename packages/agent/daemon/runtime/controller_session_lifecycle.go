@@ -39,6 +39,11 @@ func (c *Controller) Start(ctx context.Context, input StartInput) (StartResult, 
 		provider,
 		firstNonEmpty(input.PermissionModeID, defaultPermissionModeIDForProvider(provider)),
 	)
+	if len(settings.ModelParameters) > 0 {
+		if _, ok := adapter.(ModelParameterSettingsAdapter); !ok {
+			return StartResult{}, ErrModelParameterSettingsUnsupported
+		}
+	}
 	title := titletext.Normalize(input.Title)
 	initialTitleEstablished := input.InitialTitleEstablished || title != ""
 	permissionModeID := settings.PermissionModeID
@@ -187,6 +192,11 @@ func (c *Controller) Resume(ctx context.Context, input ResumeInput) (Session, er
 	}
 	if session.Settings != nil {
 		session.PermissionModeID = session.Settings.PermissionModeID
+		if len(session.Settings.ModelParameters) > 0 {
+			if _, ok := adapter.(ModelParameterSettingsAdapter); !ok {
+				return Session{}, ErrModelParameterSettingsUnsupported
+			}
+		}
 	}
 	c.invalidateAppliedGoalGenerationFences(session)
 	if err := adapter.Resume(ctx, session); err != nil {
@@ -388,6 +398,7 @@ func normalizeSessionSettings(settings *SessionSettings, provider string, defaul
 		return normalized
 	}
 	normalized.Model = strings.TrimSpace(settings.Model)
+	normalized.ModelParameters = cloneModelParameterValues(settings.ModelParameters)
 	normalized.ReasoningEffort = strings.TrimSpace(settings.ReasoningEffort)
 	normalized.Speed = strings.TrimSpace(settings.Speed)
 	normalized.ConversationDetailMode = normalizeAgentConversationDetailMode(settings.ConversationDetailMode)
@@ -419,8 +430,25 @@ func normalizeOptionalSessionSettings(
 }
 
 func cloneSessionSettings(settings SessionSettings) *SessionSettings {
+	settings.ModelParameters = cloneModelParameterValues(settings.ModelParameters)
 	cloned := settings
 	return &cloned
+}
+
+func cloneModelParameterValues(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(values))
+	for key, value := range values {
+		if strings.TrimSpace(key) != "" && strings.TrimSpace(value) != "" {
+			result[key] = value
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 // applySessionEventsBase folds the non-status parts of an event batch:

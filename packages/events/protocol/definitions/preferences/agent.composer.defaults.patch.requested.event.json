@@ -23,7 +23,20 @@
           "model": { "type": ["string", "null"] },
           "permissionModeId": { "type": ["string", "null"] },
           "reasoningEffort": { "type": ["string", "null"] },
-          "speed": { "type": ["string", "null"] }
+          "speed": { "type": ["string", "null"] },
+          "modelParameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["baseModelId", "values"],
+            "properties": {
+              "baseModelId": { "type": "string", "minLength": 1 },
+              "values": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": { "type": ["string", "null"] }
+              }
+            }
+          }
         }
       },
       "clientMutationId": {

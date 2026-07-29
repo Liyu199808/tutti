@@ -1004,6 +1004,16 @@ target/cwd/settings request cache. It does not force a refresh; force is
 reserved for explicit invalidation, completed Session creation, and documented
 provider prewarm behavior.
 
+The model menu consumes provider-neutral `modelParameterProfiles`. It uses
+`baseModelId` for Context/reasoning memory and exact `agentTargetId` for the
+global Fast preference. Capability source and current-value evidence come from
+the daemon; the shared controller/view must not decode provider names or
+parameterized model ids. A profile with a verified current value but no
+candidate range is display-only. Live changes are next-request settings and
+remain pending until `UpdateSettings` returns the runtime-confirmed Session;
+provider rejection restores the authoritative value rather than displaying
+optimistic success.
+
 Trusted host/daemon code resolves a target-backed request through `agent_targets`, then derives provider and runtime reference. If a client supplies both target and provider, daemon rejects a mismatch.
 
 ### 5.2 Provider strategy

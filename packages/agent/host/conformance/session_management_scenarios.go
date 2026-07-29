@@ -128,38 +128,56 @@ func runHistoricalAndLiveSettings(ctx context.Context, driver Driver) error {
 	historical := Fixture{Session: &SessionSeed{
 		WorkspaceID: "workspace-1", AgentSessionID: "session-settings-history", Provider: "claude-code",
 		ProviderSessionID: "provider-settings-history", Cwd: "/workspace",
-		Settings: agenthost.ComposerSettings{Model: "model-a", PermissionModeID: "review"},
+		Settings: agenthost.ComposerSettings{
+			Model: "model-a", PermissionModeID: "review",
+			ModelParameters: map[string]string{"context": "200k", "future_parameter": "opaque-current"},
+		},
 	}}
 	if err := driver.Reset(ctx, historical); err != nil {
 		return err
 	}
 	permissionMode := "acceptEdits"
+	contextWindow := "1m"
 	result, err := driver.UpdateSettings(ctx, agenthost.UpdateSettingsInput{
 		WorkspaceID: "workspace-1", AgentSessionID: "session-settings-history",
-		Settings: agenthost.ComposerSettingsPatch{PermissionModeID: &permissionMode},
+		Settings: agenthost.ComposerSettingsPatch{
+			PermissionModeID: &permissionMode,
+			ModelParameters:  map[string]*string{"context": &contextWindow},
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("update historical settings: %w", err)
 	}
 	if result.Live || result.Settings.Model != "model-a" || result.Settings.PermissionModeID != "acceptEdits" ||
+		result.Settings.ModelParameters["context"] != "1m" ||
+		result.Settings.ModelParameters["future_parameter"] != "opaque-current" ||
 		driver.Metrics().UpdateSettingsCalls != 0 || driver.Metrics().ResumeCalls != 0 {
 		return fmt.Errorf("historical settings=%#v metrics=%#v", result, driver.Metrics())
 	}
 
 	live := liveSessionFixture("session-settings-live", "")
-	live.Session.Settings = agenthost.ComposerSettings{Model: "model-a", PermissionModeID: "review"}
+	live.Session.Settings = agenthost.ComposerSettings{
+		Model: "model-a", PermissionModeID: "review",
+		ModelParameters: map[string]string{"context": "200k", "future_parameter": "opaque-current"},
+	}
 	if err := driver.Reset(ctx, live); err != nil {
 		return err
 	}
 	planMode := true
+	liveContextWindow := "1m"
 	result, err = driver.UpdateSettings(ctx, agenthost.UpdateSettingsInput{
 		WorkspaceID: "workspace-1", AgentSessionID: "session-settings-live",
-		Settings: agenthost.ComposerSettingsPatch{PlanMode: &planMode},
+		Settings: agenthost.ComposerSettingsPatch{
+			PlanMode:        &planMode,
+			ModelParameters: map[string]*string{"context": &liveContextWindow},
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("update live settings: %w", err)
 	}
 	if !result.Live || !result.Settings.PlanMode || result.Settings.Model != "model-a" ||
+		result.Settings.ModelParameters["context"] != "1m" ||
+		result.Settings.ModelParameters["future_parameter"] != "opaque-current" ||
 		driver.Metrics().UpdateSettingsCalls != 1 {
 		return fmt.Errorf("live settings=%#v metrics=%#v", result, driver.Metrics())
 	}
@@ -169,7 +187,9 @@ func runHistoricalAndLiveSettings(ctx context.Context, driver Driver) error {
 	if err != nil {
 		return fmt.Errorf("get canonical live settings: %w", err)
 	}
-	if canonical.Live || !canonical.Settings.PlanMode || canonical.Settings.Model != "model-a" {
+	if canonical.Live || !canonical.Settings.PlanMode || canonical.Settings.Model != "model-a" ||
+		canonical.Settings.ModelParameters["context"] != "1m" ||
+		canonical.Settings.ModelParameters["future_parameter"] != "opaque-current" {
 		return fmt.Errorf("canonical live settings=%#v", canonical)
 	}
 	return nil
