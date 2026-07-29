@@ -89,6 +89,9 @@ func (p serviceHostSettingsPolicy) NormalizePersistedSettings(
 	patch agenthost.ComposerSettingsPatch,
 ) agenthost.ComposerSettings {
 	settings = normalizeObservedComposerSettingsForProvider(session.Provider, settings)
+	if composerUsesCursorWireParameterizedModels(session.Provider) {
+		settings = applyCursorWireComposerSettings(settings)
+	}
 	if patch.Model != nil || patch.ReasoningEffort != nil {
 		settings.ReasoningEffort = p.service.clampReasoningEffortForModel(
 			ctx,
@@ -108,9 +111,11 @@ func (p serviceHostSettingsPolicy) NormalizeRuntimeSettingsPatch(
 	provider := strings.TrimSpace(session.Provider)
 	selectedModel := ""
 	selectedReasoningEffort := ""
+	current := ComposerSettings{}
 	if session.Settings != nil {
 		selectedModel = session.Settings.Model
 		selectedReasoningEffort = session.Settings.ReasoningEffort
+		current = *session.Settings
 	}
 	if settings.Model != nil {
 		selectedModel = strings.TrimSpace(*settings.Model)
@@ -136,6 +141,9 @@ func (p serviceHostSettingsPolicy) NormalizeRuntimeSettingsPatch(
 			normalized = normalizeSpeedForProvider(provider, normalized)
 		}
 		settings.Speed = &normalized
+	}
+	if composerUsesCursorWireParameterizedModels(provider) {
+		settings = applyCursorWireComposerSettingsPatch(current, settings)
 	}
 	return settings
 }

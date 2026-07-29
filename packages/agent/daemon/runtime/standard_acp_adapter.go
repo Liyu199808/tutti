@@ -73,6 +73,11 @@ type standardACPConfig struct {
 	restrictConfigOptions          bool
 	launchPermission               *StandardACPLaunchPermissionSetting
 	setModelReasoningEffortMeta    bool
+	// encodeModelParametersInModelID folds opaque ModelParameters and Speed
+	// into the selectable model id before ACP set_config_option. Used by
+	// Cursor-style parameterized model providers that do not advertise
+	// Context/reasoning/speed as standalone config options.
+	encodeModelParametersInModelID bool
 	messageDiagnostics             *standardACPMessageDiagnostics
 	capabilities                   []string
 	agentTargetID                  string

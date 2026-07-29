@@ -80,11 +80,12 @@ type composerProfile struct {
 	PermissionConfigOptionID string
 	// SkillKind selects the provider-local discovery implementation while
 	// SkillInvocation controls how discovered skills are invoked in the GUI.
-	SkillKind               string
-	SkillInvocation         string
-	SkillConfigDirSuffix    string
-	Behavior                providerregistry.ComposerBehaviorDescriptor
-	ModelCapabilityRuleKind providerregistry.ModelCapabilityRuleKind
+	SkillKind                       string
+	SkillInvocation                 string
+	SkillConfigDirSuffix            string
+	Behavior                        providerregistry.ComposerBehaviorDescriptor
+	ModelCapabilityRuleKind         providerregistry.ModelCapabilityRuleKind
+	ParameterizedModelCompatibility providerregistry.ParameterizedModelCompatibilityKind
 }
 
 func defaultComposerProfiles() map[string]composerProfile {
@@ -121,26 +122,27 @@ func composerProfileFromDescriptor(provider providerregistry.ProviderDescriptor)
 			CommandEffects:              append([]providerregistry.SlashCommandEffectDescriptor(nil), descriptor.SlashCommandPolicy.CommandEffects...),
 			CommandCatalogAuthoritative: descriptor.SlashCommandPolicy.CommandCatalogAuthoritative,
 		},
-		ReasoningEffort:          descriptor.ReasoningEffort,
-		ReasoningEffortOptions:   descriptor.ReasoningEffortOptions,
-		ReasoningEffortValues:    append([]string(nil), descriptor.ReasoningEffortValues...),
-		DefaultReasoningEffort:   strings.TrimSpace(descriptor.DefaultReasoningEffort),
-		Speed:                    descriptor.Speed,
-		SpeedValues:              append([]string(nil), descriptor.SpeedValues...),
-		DefaultSpeed:             strings.TrimSpace(descriptor.DefaultSpeed),
-		Capabilities:             append([]string(nil), descriptor.Capabilities...),
-		PermissionConfigurable:   descriptor.PermissionConfigurable,
-		DefaultPermissionModeID:  strings.TrimSpace(descriptor.DefaultPermissionModeID),
-		PermissionModes:          permissionModes,
-		ModelConfigOptionID:      strings.TrimSpace(descriptor.ConfigOptionIDs.Model),
-		ReasoningConfigOptionID:  strings.TrimSpace(descriptor.ConfigOptionIDs.Reasoning),
-		SpeedConfigOptionID:      strings.TrimSpace(descriptor.ConfigOptionIDs.Speed),
-		PermissionConfigOptionID: strings.TrimSpace(descriptor.ConfigOptionIDs.Permission),
-		SkillKind:                strings.TrimSpace(string(descriptor.Skills.Kind)),
-		SkillInvocation:          strings.TrimSpace(string(descriptor.Skills.Invocation)),
-		SkillConfigDirSuffix:     strings.TrimSpace(descriptor.Skills.ConfigDirSuffix),
-		Behavior:                 descriptor.Behavior,
-		ModelCapabilityRuleKind:  descriptor.ModelCapabilityRuleKind,
+		ReasoningEffort:                 descriptor.ReasoningEffort,
+		ReasoningEffortOptions:          descriptor.ReasoningEffortOptions,
+		ReasoningEffortValues:           append([]string(nil), descriptor.ReasoningEffortValues...),
+		DefaultReasoningEffort:          strings.TrimSpace(descriptor.DefaultReasoningEffort),
+		Speed:                           descriptor.Speed,
+		SpeedValues:                     append([]string(nil), descriptor.SpeedValues...),
+		DefaultSpeed:                    strings.TrimSpace(descriptor.DefaultSpeed),
+		Capabilities:                    append([]string(nil), descriptor.Capabilities...),
+		PermissionConfigurable:          descriptor.PermissionConfigurable,
+		DefaultPermissionModeID:         strings.TrimSpace(descriptor.DefaultPermissionModeID),
+		PermissionModes:                 permissionModes,
+		ModelConfigOptionID:             strings.TrimSpace(descriptor.ConfigOptionIDs.Model),
+		ReasoningConfigOptionID:         strings.TrimSpace(descriptor.ConfigOptionIDs.Reasoning),
+		SpeedConfigOptionID:             strings.TrimSpace(descriptor.ConfigOptionIDs.Speed),
+		PermissionConfigOptionID:        strings.TrimSpace(descriptor.ConfigOptionIDs.Permission),
+		SkillKind:                       strings.TrimSpace(string(descriptor.Skills.Kind)),
+		SkillInvocation:                 strings.TrimSpace(string(descriptor.Skills.Invocation)),
+		SkillConfigDirSuffix:            strings.TrimSpace(descriptor.Skills.ConfigDirSuffix),
+		Behavior:                        descriptor.Behavior,
+		ModelCapabilityRuleKind:         descriptor.ModelCapabilityRuleKind,
+		ParameterizedModelCompatibility: descriptor.ParameterizedModelCompatibility,
 	}
 }
 

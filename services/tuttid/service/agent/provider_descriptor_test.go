@@ -56,6 +56,15 @@ func TestCursorComposerProfileComesFromProviderDescriptor(t *testing.T) {
 	if profile.SkillKind != string(providerregistry.SkillKindCursor) || profile.SkillInvocation != string(providerregistry.SkillInvocationTextTrigger) {
 		t.Fatalf("cursor skill profile = %#v", profile)
 	}
+	if profile.ParameterizedModelCompatibility != providerregistry.ParameterizedModelCompatibilityKindCursorWire {
+		t.Fatalf("cursor parameterized compatibility = %q", profile.ParameterizedModelCompatibility)
+	}
+	if !profile.Speed || !reflect.DeepEqual(profile.SpeedValues, []string{"standard", "fast"}) || profile.DefaultSpeed != "standard" {
+		t.Fatalf("cursor speed profile = %#v", profile)
+	}
+	if speedConfigOptionID(agentprovider.Cursor) != "fast" {
+		t.Fatalf("cursor speed config option = %q", speedConfigOptionID(agentprovider.Cursor))
+	}
 }
 
 func TestUnknownProviderHasNoComposerProtocolFallbacks(t *testing.T) {

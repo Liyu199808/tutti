@@ -150,10 +150,25 @@ func (s *Service) UpdateSettings(ctx context.Context, workspaceID string, agentS
 		normalizedSpeed := normalizeSpeedForProvider(provider, *settings.Speed)
 		settings.Speed = &normalizedSpeed
 	}
+	beforeModel := strings.TrimSpace(currentSettings.Model)
+	if composerUsesCursorWireParameterizedModels(provider) {
+		settings = applyCursorWireComposerSettingsPatch(currentSettings, settings)
+	}
 	result, err := s.ApplicationHost().UpdateSettings(ctx, agenthost.UpdateSettingsInput{
 		WorkspaceID: workspaceID, AgentSessionID: agentSessionID, Settings: settings,
 	})
 	if err != nil {
+		if composerUsesCursorWireParameterizedModels(provider) {
+			if rejection := cursorWireRejectionFromUpdateError(
+				agentSessionID,
+				beforeModel,
+				settings,
+				err,
+			); rejection != nil {
+				s.cursorWireRejections().remember(rejection)
+				return Session{}, rejection
+			}
+		}
 		return Session{}, err
 	}
 	return s.projectHostSessionResult(

@@ -173,27 +173,30 @@ func (a *standardACPAdapter) applySessionConfigOptions(
 			a.updateSessionConfigOption(session.AgentSessionID, reasoningConfigID, reasoning)
 		}
 	}
-	if speed := strings.TrimSpace(settings.Speed); speed != "" && supported["fast"] {
+	if speed := strings.TrimSpace(settings.Speed); speed != "" && supported["fast"] &&
+		!a.config.encodeModelParametersInModelID {
 		if err := a.setSessionConfigOption(ctx, client, session, "fast", speed); err != nil {
 			return fmt.Errorf("agent session ACP fast configuration failed: %w", err)
 		}
 		a.updateSessionConfigOption(session.AgentSessionID, "fast", speed)
 	}
-	modelParameterIDs := make([]string, 0, len(settings.ModelParameters))
-	for configID := range settings.ModelParameters {
-		modelParameterIDs = append(modelParameterIDs, configID)
-	}
-	sort.Strings(modelParameterIDs)
-	for _, rawConfigID := range modelParameterIDs {
-		configID := rawConfigID
-		value := settings.ModelParameters[rawConfigID]
-		if strings.TrimSpace(configID) == "" || strings.TrimSpace(value) == "" {
-			return fmt.Errorf("agent session ACP model parameter %q has no selectable value", configID)
+	if !a.config.encodeModelParametersInModelID {
+		modelParameterIDs := make([]string, 0, len(settings.ModelParameters))
+		for configID := range settings.ModelParameters {
+			modelParameterIDs = append(modelParameterIDs, configID)
 		}
-		if err := a.setSessionConfigOption(ctx, client, session, configID, value); err != nil {
-			return fmt.Errorf("agent session ACP model parameter %s configuration failed: %w", configID, err)
+		sort.Strings(modelParameterIDs)
+		for _, rawConfigID := range modelParameterIDs {
+			configID := rawConfigID
+			value := settings.ModelParameters[rawConfigID]
+			if strings.TrimSpace(configID) == "" || strings.TrimSpace(value) == "" {
+				return fmt.Errorf("agent session ACP model parameter %q has no selectable value", configID)
+			}
+			if err := a.setSessionConfigOption(ctx, client, session, configID, value); err != nil {
+				return fmt.Errorf("agent session ACP model parameter %s configuration failed: %w", configID, err)
+			}
+			a.updateSessionConfigOption(session.AgentSessionID, configID, value)
 		}
-		a.updateSessionConfigOption(session.AgentSessionID, configID, value)
 	}
 	a.logStandardACPStartupDiagnostics("config_options.succeeded", map[string]any{
 		"room_id":             session.RoomID,
@@ -516,9 +519,12 @@ func (a *standardACPAdapter) ApplySessionSettings(
 		// switched in place via set_config_option, even if it is a concrete id
 		// (e.g. Opus 4.6) rather than one of the static aliases. Only models the
 		// running agent has not advertised still require a fresh session.
+		// Cursor-style parameterized ids are rewritten locally (context /
+		// reasoning / fast) and are often absent from the advertised list even
+		// though session/set_config_option accepts them; always attempt those.
 		modelConfigID := a.effectiveModelConfigOptionID()
 		advertised := modelConfigID != "" && a.sessionConfigOptionAdvertisesValue(session.AgentSessionID, modelConfigID, model)
-		if advertised {
+		if advertised || (a.config.encodeModelParametersInModelID && model != "" && modelConfigID != "") {
 			if !a.sessionConfigOptionMatches(session.AgentSessionID, modelConfigID, model) {
 				var err error
 				if modelConfigID == "model" && a.sessionUsesACPModelsAPI(session.AgentSessionID) {
@@ -563,7 +569,7 @@ func (a *standardACPAdapter) ApplySessionSettings(
 		}
 	}
 
-	if patch.Speed != nil {
+	if patch.Speed != nil && !a.config.encodeModelParametersInModelID {
 		speed := strings.TrimSpace(*patch.Speed)
 		if speed != "" {
 			if !a.sessionConfigOptionMatches(session.AgentSessionID, "fast", speed) {
@@ -575,7 +581,7 @@ func (a *standardACPAdapter) ApplySessionSettings(
 		}
 	}
 
-	if len(patch.ModelParameters) > 0 {
+	if len(patch.ModelParameters) > 0 && !a.config.encodeModelParametersInModelID {
 		keys := make([]string, 0, len(patch.ModelParameters))
 		for key := range patch.ModelParameters {
 			keys = append(keys, key)

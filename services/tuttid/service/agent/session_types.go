@@ -99,6 +99,10 @@ type Service struct {
 	// modelPlanBinding wires the optional workspace model access plan
 	// integration; see ConfigureModelPlanBinding.
 	modelPlanBinding modelPlanBindingRuntime
+	// cursorWireRejectionCache retains exact ACP-rejected parameterized model
+	// parameter values for the current runtime only so composer-options can
+	// disable them without persisting a false success state.
+	cursorWireRejectionCache *cursorWireRejectionCache
 }
 
 type TuttiModeSourceActivity struct {

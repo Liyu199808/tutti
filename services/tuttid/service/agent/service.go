@@ -202,6 +202,9 @@ func (s *Service) CreateWithResult(ctx context.Context, workspaceID string, inpu
 		ReasoningEffort:  normalizeReasoningEffortForLaunch(provider, input.ProviderTargetRef, value(input.ReasoningEffort)),
 		Speed:            normalizeSpeedForLaunch(provider, input.ProviderTargetRef, value(input.Speed)),
 	}
+	if composerUsesCursorWireParameterizedModels(provider) {
+		runtimeSettings = applyCursorWireComposerSettings(runtimeSettings)
+	}
 	hostInput := agenthost.CreateSessionInput{
 		AgentSessionID: input.AgentSessionID, AgentTargetID: input.AgentTargetID, Provider: input.Provider,
 		InitialContent: normalizedContent, InitialDisplayPrompt: input.InitialDisplayPrompt,
@@ -337,7 +340,7 @@ func (s *Service) applyCreateSessionComposerDefaults(ctx context.Context, input 
 	if input.Speed == nil && strings.TrimSpace(defaults.Speed) != "" {
 		input.Speed = stringPointer(defaults.Speed)
 	}
-	baseModelID := strings.TrimSpace(value(input.Model))
+	baseModelID := parameterizedModelBaseID(value(input.Model))
 	if remembered := defaults.ModelParametersByBaseModel[baseModelID]; len(remembered) > 0 {
 		if input.ModelParameters == nil {
 			input.ModelParameters = map[string]string{}

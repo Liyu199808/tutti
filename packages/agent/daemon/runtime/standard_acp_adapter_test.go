@@ -1176,6 +1176,47 @@ func TestCursorAdapterStartAppliesModelConfigOption(t *testing.T) {
 	}
 }
 
+func TestCursorAdapterApplySessionSettingsEncodesParametersInModelID(t *testing.T) {
+	t.Parallel()
+
+	transport := newStandardACPTransport("Cursor Agent", "cursor-session-encode")
+	transport.conn.configOptions = []map[string]any{{
+		"id": "model", "currentValue": "gpt-5.5[context=272k,reasoning=medium,fast=false]",
+		"options": []any{
+			map[string]any{"value": "gpt-5.5[context=272k,reasoning=medium,fast=false]", "name": "gpt-5.5"},
+		},
+	}}
+	adapter := newCursorAdapterWithHostMetadata(transport, LegacyHostMetadata(), nil)
+	session := standardTestSession(ProviderCursor)
+	session.Settings = &SessionSettings{Model: "gpt-5.5[context=272k,reasoning=medium,fast=false]"}
+	if _, err := adapter.Start(context.Background(), session); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	beforeCalls := len(transport.conn.setConfigOptionCalls())
+
+	nextModel := "gpt-5.5[context=1m,reasoning=xhigh,fast=true]"
+	contextWindow := "1m"
+	speed := "fast"
+	if err := adapter.ApplySessionSettings(context.Background(), session, SessionSettingsPatch{
+		Model:           &nextModel,
+		ModelParameters: map[string]*string{"context": &contextWindow, "reasoning": stringPointer("xhigh"), "speed": &speed},
+		Speed:           &speed,
+	}); err != nil {
+		t.Fatalf("ApplySessionSettings: %v", err)
+	}
+	calls := transport.conn.setConfigOptionCalls()
+	if len(calls) != beforeCalls+1 {
+		t.Fatalf("config option calls = %#v, want only one rewritten model after start", calls)
+	}
+	last := calls[len(calls)-1]
+	if got, _ := last["configId"].(string); got != "model" {
+		t.Fatalf("config id = %q", got)
+	}
+	if got, _ := last["value"].(string); got != nextModel {
+		t.Fatalf("config value = %q, want %q", got, nextModel)
+	}
+}
+
 func TestCursorACPModeID(t *testing.T) {
 	t.Parallel()
 

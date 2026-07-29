@@ -126,6 +126,7 @@ func newCursorAdapterFromProviderDescriptor(
 	adapter.config.commandWithSettings = cursorACPCommandWithPluginDir
 	adapter.config.automaticPermissionDecision = cursorAutoApprovePermissionDecision
 	adapter.config.autoContinueRetriableTurnError = true
+	adapter.config.encodeModelParametersInModelID = true
 	adapter.config.messageDiagnostics = &standardACPMessageDiagnostics{
 		method:         cursorACPMethodTask,
 		observeMessage: logCursorACPTaskExtension,

@@ -177,6 +177,17 @@ round-trip through `effectiveSettings.modelParameters`. The settings update DTO
 uses a separate sparse patch shape so null removes one parameter while omitted
 unknown parameters survive.
 
+Cursor ACP currently advertises parameterized model ids (for example
+`gpt-5.5[context=272k,reasoning=medium,fast=false]`) rather than a full
+per-model candidate catalog. Providers with
+`ParameterizedModelCompatibilityKindCursorWire` therefore decode and rewrite
+those ids with this audited fallback order: ACP structured metadata, exact-model
+preset, model-family preset, then verified current-value evidence only. Extra
+High uses the wire value `xhigh`. Fast stays a target-global `speed`
+preference and is encoded into the model id only when the id, an exact preset,
+or ACP metadata proves support. ACP rejection must not persist or claim
+success; the daemon retains exact rejected values for the current runtime only.
+
 ## Desktop Agent Conversation Detail Mode
 
 `agentConversationDetailMode` is a global desktop preference, not a provider-specific

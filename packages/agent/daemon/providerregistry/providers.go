@@ -42,17 +42,25 @@ func cursorDescriptor() ProviderDescriptor {
 			// so an empty composer needs a no-prompt hidden session before the first
 			// visible conversation can choose a non-default model.
 			ModelSelection: true, LiveModelDiscovery: LiveModelDiscoveryDescriptor{Kind: LiveModelDiscoveryKindRuntimeSession, HiddenProbe: true, AccountScoped: true}, Capabilities: []string{CapabilityImageInput, CapabilityModelImageInputRequired, CapabilityInterrupt, CapabilityPlanMode, CapabilityModelSwitch}, PermissionConfigurable: true, DefaultPermissionModeID: "agent",
-			PermissionModes: []PermissionModeDescriptor{{ID: "read-only", Semantic: "ask-before-write"}, {ID: "agent", Semantic: "auto"}, {ID: "full-access", Semantic: "full-access"}}, ConfigOptionIDs: ComposerConfigOptionIDs{Model: "model"},
+			PermissionModes: []PermissionModeDescriptor{{ID: "read-only", Semantic: "ask-before-write"}, {ID: "agent", Semantic: "auto"}, {ID: "full-access", Semantic: "full-access"}},
+			// Speed is a target-global preference. Cursor encodes it in the
+			// parameterized model id (`fast=true|false`) rather than a durable
+			// standalone ACP config option; the wire adapter folds it before
+			// session/set_config_option.
+			Speed: true, SpeedValues: []string{"standard", "fast"}, DefaultSpeed: "standard",
+			ConfigOptionIDs: ComposerConfigOptionIDs{Model: "model", Speed: "fast"},
 			SlashCommandPolicy: SlashCommandPolicyDescriptor{
-				FallbackCommands:            []string{"plan"},
+				FallbackCommands:            []string{"plan", "fast"},
 				CommandCatalogAuthoritative: true,
 				CommandEffects: []SlashCommandEffectDescriptor{
 					{Command: "plan", Effect: SlashCommandEffectTogglePlanMode},
+					{Command: "fast", Effect: SlashCommandEffectToggleSpeed},
 				},
 			},
-			Behavior:                ComposerBehaviorDescriptor{CollapseModelOptionsToLatest: true, PreserveLiveModelCache: true},
-			ModelCapabilityRuleKind: ModelCapabilityRuleKindCursorComposerImage,
-			Skills:                  SkillDescriptor{Kind: SkillKindCursor, Invocation: SkillInvocationTextTrigger},
+			Behavior:                        ComposerBehaviorDescriptor{CollapseModelOptionsToLatest: true, PreserveLiveModelCache: true},
+			ModelCapabilityRuleKind:         ModelCapabilityRuleKindCursorComposerImage,
+			ParameterizedModelCompatibility: ParameterizedModelCompatibilityKindCursorWire,
+			Skills:                          SkillDescriptor{Kind: SkillKindCursor, Invocation: SkillInvocationTextTrigger},
 		},
 		Target:  TargetDescriptor{ID: CursorTargetID, LaunchRefType: TargetLaunchRefTypeLocalCLI, Enabled: true, SortOrder: 30},
 		Events:  EventsDescriptor{Enabled: true, Aliases: []string{"cursor-agent", "cursor_agent"}, TurnLifecycleProjection: TurnLifecycleProjectionExplicit},

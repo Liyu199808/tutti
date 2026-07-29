@@ -460,6 +460,9 @@ func (s *Service) GetComposerOptions(ctx context.Context, input ComposerOptionsI
 		options = applyExtensionComposerCapabilities(options, extensionProfile)
 	}
 	options = applyResolvedModelPlanComposerOverlay(options, modelPlanResolution)
+	if composerUsesCursorWireParameterizedModels(provider) {
+		options = s.applyCursorWireModelParameterProfiles(input, options)
+	}
 	return options, nil
 }
 
@@ -479,7 +482,7 @@ func mergeComposerSettingsWithDefaults(
 	if strings.TrimSpace(requested.Speed) == "" {
 		requested.Speed = defaults.Speed
 	}
-	baseModelID := strings.TrimSpace(requested.Model)
+	baseModelID := parameterizedModelBaseID(requested.Model)
 	if remembered := defaults.ModelParametersByBaseModel[baseModelID]; len(remembered) > 0 {
 		if requested.ModelParameters == nil {
 			requested.ModelParameters = map[string]string{}

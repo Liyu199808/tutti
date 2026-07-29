@@ -459,6 +459,18 @@ type ModelCapabilityRuleKind string
 
 const ModelCapabilityRuleKindCursorComposerImage ModelCapabilityRuleKind = "cursor_composer_image"
 
+// ParameterizedModelCompatibilityKind selects how a provider encodes
+// Context/reasoning/speed into selectable model ids. Empty means the provider
+// does not use parameterized model-id compatibility.
+type ParameterizedModelCompatibilityKind string
+
+const (
+	// ParameterizedModelCompatibilityKindCursorWire rewrites opaque
+	// modelParameters into Cursor-style `base[key=value,...]` model ids and
+	// projects family/exact/current-value capabilities with ACP precedence.
+	ParameterizedModelCompatibilityKindCursorWire ParameterizedModelCompatibilityKind = "cursor_wire"
+)
+
 type SlashCommandEffect string
 
 const (
@@ -490,28 +502,29 @@ const (
 )
 
 type ComposerProfileDescriptor struct {
-	ModelSelection          bool
-	ModelCatalog            ModelCatalogKind
-	ReasoningEffort         bool
-	ReasoningEffortValues   []string
-	ReasoningEffortOptions  ReasoningEffortOptionsKind
-	DefaultReasoningEffort  string
-	ConfiguredModelOverride ConfiguredModelOverrideKind
-	Speed                   bool
-	SpeedValues             []string
-	DefaultSpeed            string
-	Capabilities            []string
-	PermissionConfigurable  bool
-	DefaultPermissionModeID string
-	PermissionModes         []PermissionModeDescriptor
-	ConfigOptionIDs         ComposerConfigOptionIDs
-	Skills                  SkillDescriptor
-	CapabilityCatalog       CapabilityCatalogDescriptor
-	LiveModelDiscovery      LiveModelDiscoveryDescriptor
-	SlashCommandPolicy      SlashCommandPolicyDescriptor
-	PlanDecisionStrategy    PlanDecisionStrategy
-	Behavior                ComposerBehaviorDescriptor
-	ModelCapabilityRuleKind ModelCapabilityRuleKind
+	ModelSelection                  bool
+	ModelCatalog                    ModelCatalogKind
+	ReasoningEffort                 bool
+	ReasoningEffortValues           []string
+	ReasoningEffortOptions          ReasoningEffortOptionsKind
+	DefaultReasoningEffort          string
+	ConfiguredModelOverride         ConfiguredModelOverrideKind
+	Speed                           bool
+	SpeedValues                     []string
+	DefaultSpeed                    string
+	Capabilities                    []string
+	PermissionConfigurable          bool
+	DefaultPermissionModeID         string
+	PermissionModes                 []PermissionModeDescriptor
+	ConfigOptionIDs                 ComposerConfigOptionIDs
+	Skills                          SkillDescriptor
+	CapabilityCatalog               CapabilityCatalogDescriptor
+	LiveModelDiscovery              LiveModelDiscoveryDescriptor
+	SlashCommandPolicy              SlashCommandPolicyDescriptor
+	PlanDecisionStrategy            PlanDecisionStrategy
+	Behavior                        ComposerBehaviorDescriptor
+	ModelCapabilityRuleKind         ModelCapabilityRuleKind
+	ParameterizedModelCompatibility ParameterizedModelCompatibilityKind
 }
 
 type TargetDescriptor struct {

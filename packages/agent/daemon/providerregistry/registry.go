@@ -518,6 +518,15 @@ func Validate(descriptor ProviderDescriptor) error {
 	default:
 		return fmt.Errorf("provider %q model capability rule kind %q is unsupported", providerID, descriptor.ComposerProfile.ModelCapabilityRuleKind)
 	}
+	switch descriptor.ComposerProfile.ParameterizedModelCompatibility {
+	case "", ParameterizedModelCompatibilityKindCursorWire:
+	default:
+		return fmt.Errorf(
+			"provider %q parameterized model compatibility kind %q is unsupported",
+			providerID,
+			descriptor.ComposerProfile.ParameterizedModelCompatibility,
+		)
+	}
 	defaultPermissionModeID := strings.TrimSpace(descriptor.ComposerProfile.DefaultPermissionModeID)
 	if defaultPermissionModeID != "" {
 		found := false
