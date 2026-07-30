@@ -382,7 +382,6 @@ func applyCursorWireComposerSettings(settings ComposerSettings) ComposerSettings
 		return settings
 	}
 	fastSupported := cursorWireFastSupported(
-		settings.Model,
 		parameterizedModelBaseID(settings.Model),
 		false,
 	)

@@ -129,7 +129,7 @@ func cursorWireReasoningKey(baseModelID string, parsed parameterizedModelID) str
 	return ""
 }
 
-func cursorWireFastSupported(modelID string, baseModelID string, acpFastDeclared bool) bool {
+func cursorWireFastSupported(baseModelID string, acpFastDeclared bool) bool {
 	if acpFastDeclared {
 		return true
 	}

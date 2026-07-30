@@ -270,15 +270,6 @@ func (a *standardACPAdapter) setSessionConfigOption(
 	value string,
 ) error {
 	startedAt := time.Now()
-	if a.config.provider == ProviderCursor && configID == a.effectiveModelConfigOptionID() {
-		slog.Info("Cursor ACP startup model configuration started",
-			"event", "agent.cursor_model_switch.create.acp.start",
-			"agent_session_id", session.AgentSessionID,
-			"provider_session_id", session.ProviderSessionID,
-			"config_id", configID,
-			"model", value,
-		)
-	}
 	a.logStandardACPStartupDiagnostics("config_option.start", map[string]any{
 		"room_id":             session.RoomID,
 		"agent_session_id":    session.AgentSessionID,
@@ -296,17 +287,6 @@ func (a *standardACPAdapter) setSessionConfigOption(
 		return err
 	})
 	if err != nil {
-		if a.config.provider == ProviderCursor && configID == a.effectiveModelConfigOptionID() {
-			slog.Warn("Cursor ACP startup model configuration rejected",
-				"event", "agent.cursor_model_switch.create.acp.rejected",
-				"agent_session_id", session.AgentSessionID,
-				"provider_session_id", session.ProviderSessionID,
-				"config_id", configID,
-				"model", value,
-				"elapsed_ms", time.Since(startedAt).Milliseconds(),
-				"error", err.Error(),
-			)
-		}
 		a.logStandardACPStartupDiagnostics("config_option.failed", map[string]any{
 			"room_id":             session.RoomID,
 			"agent_session_id":    session.AgentSessionID,
@@ -318,16 +298,6 @@ func (a *standardACPAdapter) setSessionConfigOption(
 		return err
 	}
 	a.updateSessionConfigOptionsResult(session.AgentSessionID, result)
-	if a.config.provider == ProviderCursor && configID == a.effectiveModelConfigOptionID() {
-		slog.Info("Cursor ACP startup model configuration accepted",
-			"event", "agent.cursor_model_switch.create.acp.accepted",
-			"agent_session_id", session.AgentSessionID,
-			"provider_session_id", session.ProviderSessionID,
-			"config_id", configID,
-			"model", value,
-			"elapsed_ms", time.Since(startedAt).Milliseconds(),
-		)
-	}
 	a.logStandardACPStartupDiagnostics("config_option.succeeded", map[string]any{
 		"room_id":              session.RoomID,
 		"agent_session_id":     session.AgentSessionID,
@@ -557,18 +527,6 @@ func (a *standardACPAdapter) ApplySessionSettings(
 		// though session/set_config_option accepts them; always attempt those.
 		modelConfigID := a.effectiveModelConfigOptionID()
 		advertised := modelConfigID != "" && a.sessionConfigOptionAdvertisesValue(session.AgentSessionID, modelConfigID, model)
-		if a.config.provider == ProviderCursor {
-			slog.Info("Cursor ACP model switch evaluated",
-				"event", "agent.cursor_model_switch.acp.evaluated",
-				"agent_session_id", session.AgentSessionID,
-				"provider_session_id", session.ProviderSessionID,
-				"current_model", session.SettingsValue().Model,
-				"requested_model", model,
-				"model_config_id", modelConfigID,
-				"advertised", advertised,
-				"already_selected", a.sessionConfigOptionMatches(session.AgentSessionID, modelConfigID, model),
-			)
-		}
 		if advertised || (a.config.encodeModelParametersInModelID && model != "" && modelConfigID != "") {
 			if !a.sessionConfigOptionMatches(session.AgentSessionID, modelConfigID, model) {
 				var err error
@@ -579,28 +537,9 @@ func (a *standardACPAdapter) ApplySessionSettings(
 					err = a.setSessionConfigOption(ctx, acpSession.client, session, modelConfigID, model)
 				}
 				if err != nil {
-					if a.config.provider == ProviderCursor {
-						slog.Warn("Cursor ACP model switch rejected",
-							"event", "agent.cursor_model_switch.acp.rejected",
-							"agent_session_id", session.AgentSessionID,
-							"provider_session_id", session.ProviderSessionID,
-							"model_config_id", modelConfigID,
-							"requested_model", model,
-							"error", err.Error(),
-						)
-					}
 					return fmt.Errorf("agent session ACP model configuration failed: %w", err)
 				}
 				a.updateSessionConfigOption(session.AgentSessionID, modelConfigID, model)
-				if a.config.provider == ProviderCursor {
-					slog.Info("Cursor ACP model switch accepted",
-						"event", "agent.cursor_model_switch.acp.accepted",
-						"agent_session_id", session.AgentSessionID,
-						"provider_session_id", session.ProviderSessionID,
-						"model_config_id", modelConfigID,
-						"model", model,
-					)
-				}
 			}
 		}
 	}

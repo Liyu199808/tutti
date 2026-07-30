@@ -4406,16 +4406,14 @@ func TestServiceUpdateSettingsRemembersCursorParametersOnlyAfterConfirmation(t *
 		return nil
 	}
 	contextWindow := "1m"
-	fast := "fast"
 
 	if _, err := service.UpdateSettings(context.Background(), "ws-1", "session-1", ComposerSettingsPatch{
 		ModelParameters: map[string]*string{"context": &contextWindow},
-		Speed:           &fast,
 	}); err != nil {
 		t.Fatalf("UpdateSettings error = %v", err)
 	}
 	if rememberedBase != "gpt-5.5" || rememberedParameters["context"] == nil ||
-		*rememberedParameters["context"] != "1m" || rememberedSpeed != "fast" {
+		*rememberedParameters["context"] != "1m" || rememberedSpeed != "" {
 		t.Fatalf("remembered base=%q parameters=%#v speed=%q", rememberedBase, rememberedParameters, rememberedSpeed)
 	}
 }

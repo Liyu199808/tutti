@@ -54,7 +54,7 @@ func TestRewriteCursorWireModelIDFamiliesAndAuto(t *testing.T) {
 				"context": "1m", "reasoning": "xhigh",
 			},
 			speed: "fast",
-			want:  "gpt-5.5[context=1m,reasoning=xhigh,fast=true]",
+			want:  "gpt-5.5[context=1m,reasoning=xhigh,fast=false]",
 		},
 		{
 			name:  "claude effort preserves thinking",
@@ -77,10 +77,10 @@ func TestRewriteCursorWireModelIDFamiliesAndAuto(t *testing.T) {
 			want:  "composer-2.5[fast=false]",
 		},
 		{
-			name:  "composer without fast evidence does not invent",
+			name:  "composer family supports fast",
 			model: "composer-2.5",
 			speed: "fast",
-			want:  "composer-2.5",
+			want:  "composer-2.5[fast=true]",
 		},
 		{
 			name:  "auto never gains fast",

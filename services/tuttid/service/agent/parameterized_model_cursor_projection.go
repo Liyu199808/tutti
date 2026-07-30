@@ -195,7 +195,7 @@ func applyCursorWireEffectiveValues(
 		return profile
 	}
 	parsed := parseParameterizedModelID(profile.ModelID)
-	fastSupported := cursorWireFastSupported(profile.ModelID, profile.BaseModelID, false)
+	fastSupported := cursorWireFastSupported(profile.BaseModelID, false)
 	parameters := append([]ComposerModelParameterCapability(nil), profile.Parameters...)
 	hasSpeed := false
 	for index := range parameters {
@@ -341,7 +341,7 @@ func rewriteCursorWireModelID(
 		}
 		updates[key] = &selected
 	}
-	if cursorWireFastSupported(modelID, baseModelID, false) {
+	if cursorWireFastSupported(baseModelID, false) {
 		if value := strings.TrimSpace(parameters[ComposerModelParameterSemanticSpeed]); value != "" {
 			fast := cursorWireFastParamFromSpeed(value)
 			updates["fast"] = &fast

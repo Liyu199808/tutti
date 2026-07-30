@@ -86,12 +86,13 @@ func TestLiveComposerSelectedModelPreservesParameterizedCursorSelection(t *testi
 	}
 
 	if got := liveComposerSelectedModel(
+		"cursor",
 		"gpt-5.2[context=1m,reasoning=medium,fast=false]",
 		liveModels,
 	); got != "gpt-5.2[context=1m,reasoning=medium,fast=false]" {
 		t.Fatalf("selected parameterized Cursor model = %q, want preserved model", got)
 	}
-	if got := liveComposerSelectedModel("", liveModels); got != "default[]" {
+	if got := liveComposerSelectedModel("cursor", "", liveModels); got != "default[]" {
 		t.Fatalf("empty selection = %q, want Cursor Auto default[]", got)
 	}
 }

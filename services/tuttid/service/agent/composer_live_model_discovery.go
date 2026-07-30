@@ -642,7 +642,7 @@ func mergeComposerModelsIntoComposerOptions(
 	if len(normalized) == 0 {
 		return options
 	}
-	selected := liveComposerSelectedModel(options.EffectiveSettings.Model, normalized)
+	selected := liveComposerSelectedModel(options.Provider, options.EffectiveSettings.Model, normalized)
 	options.EffectiveSettings.Model = selected
 	options.ModelConfig = ComposerConfigOption{
 		Configurable:   true,
@@ -723,7 +723,7 @@ func normalizeLiveComposerModelOptions(options []ComposerConfigOptionValue) []Co
 	return normalized
 }
 
-func liveComposerSelectedModel(selectedModel string, liveModels []ComposerConfigOptionValue) string {
+func liveComposerSelectedModel(provider string, selectedModel string, liveModels []ComposerConfigOptionValue) string {
 	selectedModel = strings.TrimSpace(selectedModel)
 	if selectedModel != "" {
 		for _, option := range liveModels {
@@ -731,14 +731,11 @@ func liveComposerSelectedModel(selectedModel string, liveModels []ComposerConfig
 				return selectedModel
 			}
 		}
-		// A selected model is authoritative even when it is not one of the
-		// catalog's literal values. Cursor encodes Context / reasoning / Fast
-		// inside the model id, so a confirmed value such as
-		// "gpt-5[context=1m]" will intentionally differ from the catalog's
-		// base entry. Falling through here used to select the first catalog
-		// entry, which is normally Cursor's "default[]" (Auto), silently
-		// replacing the user's model choice.
-		return selectedModel
+		if composerUsesCursorWireParameterizedModels(provider) {
+			// A confirmed Cursor model can differ from the catalog's literal
+			// value because Context / reasoning / Fast are encoded in its id.
+			return selectedModel
+		}
 	}
 	// Only choose an automatic option when the caller did not select a model.
 	// Cursor represents Auto as "default[]", while other ACP providers use
