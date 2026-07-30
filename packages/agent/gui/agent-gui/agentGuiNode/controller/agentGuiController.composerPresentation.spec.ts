@@ -448,4 +448,20 @@ describe("composer model binding enforcement", () => {
       )
     ).toMatchObject({ model: "x-ai/grok-4.5", modelPlanId: "mp-relay" });
   });
+
+  it("keeps a parameterized model when only its current suffix changes", () => {
+    const selected = "gpt-5.6-sol[context=272k,reasoning=medium,fast=true]";
+    const catalog = options([
+      "gpt-5.6-sol[context=272k,reasoning=medium,fast=false]"
+    ]);
+    expect(verifyComposerModelAgainstNativeOptions(selected, catalog)).toBe(
+      "unverifiable"
+    );
+    expect(
+      enforceComposerModelBindingForHomeDefaults(
+        { model: selected, modelPlanId: null },
+        catalog
+      )
+    ).toMatchObject({ model: selected, modelPlanId: null });
+  });
 });

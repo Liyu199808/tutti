@@ -1704,6 +1704,29 @@ func TestCursorAdapterAllowsImagePromptWithoutInitializeCapability(t *testing.T)
 	}
 }
 
+func TestCursorAdapterStartRejectsModelInsteadOfFallingBackToAuto(t *testing.T) {
+	t.Parallel()
+
+	const selectedModel = "claude-fable-5[thinking=true,context=1m,effort=high]"
+	transport := newStandardACPTransport("Cursor", "cursor-session-1")
+	transport.conn.rejectModelValue = selectedModel
+	transport.conn.configOptions = []map[string]any{{
+		"id":           "model",
+		"currentValue": "default[]",
+		"options": []any{
+			map[string]any{"value": "default[]", "name": "Auto"},
+			map[string]any{"value": selectedModel, "name": "Claude Fable 5"},
+		},
+	}}
+	adapter := NewCursorAdapter(transport)
+	session := standardTestSession(ProviderCursor)
+	session.Settings = &SessionSettings{Model: selectedModel}
+
+	if _, err := adapter.Start(context.Background(), session); err == nil {
+		t.Fatal("Start() error = nil, want rejected explicit Cursor model")
+	}
+}
+
 func TestStandardACPAdapterRejectsImagePromptWithoutCapability(t *testing.T) {
 	t.Parallel()
 

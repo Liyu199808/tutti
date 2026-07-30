@@ -353,8 +353,9 @@ export function AgentModelReasoningDropdown({
           <DropdownMenuSeparator />
         ) : null}
         {(composerSettings.modelParameters ?? []).map((parameter) =>
-          parameter.semantic === "speed" &&
-          parameter.preferenceScope === "agentTarget" ? (
+          (parameter.semantic === "speed" &&
+            parameter.preferenceScope === "agentTarget") ||
+          parameter.semantic === "thinking" ? (
             <div
               key={parameter.id}
               className={cn(
@@ -362,7 +363,7 @@ export function AgentModelReasoningDropdown({
                 "flex cursor-default items-center gap-2",
                 !parameter.configurable && "opacity-60"
               )}
-              data-agent-model-parameter-fast-row="true"
+              data-agent-model-parameter-toggle-row={parameter.semantic}
             >
               <span className="min-w-0 flex-1 truncate">
                 {modelParameterLabel(
@@ -373,26 +374,45 @@ export function AgentModelReasoningDropdown({
               </span>
               <span className="text-[var(--text-tertiary)]">
                 {parameter.availability === "supported"
-                  ? parameter.currentValue === "fast"
-                    ? labels.speedOptionFast
-                    : labels.speedOptionStandard
+                  ? parameter.semantic === "thinking"
+                    ? parameter.currentValue === "true"
+                      ? "On"
+                      : "Off"
+                    : parameter.currentValue === "fast"
+                      ? labels.speedOptionFast
+                      : labels.speedOptionStandard
                   : labels.inheritedUnavailable}
               </span>
               <Switch
                 size="sm"
-                checked={parameter.currentValue === "fast"}
+                checked={
+                  parameter.semantic === "thinking"
+                    ? parameter.currentValue === "true"
+                    : parameter.currentValue === "fast"
+                }
                 disabled={!parameter.configurable}
                 aria-label={modelParameterLabel(
                   parameter.semantic,
                   parameter.label,
                   labels
                 )}
-                data-agent-model-parameter-fast-switch="true"
-                onCheckedChange={(checked) =>
+                data-agent-model-parameter-toggle-switch={parameter.semantic}
+                onCheckedChange={(checked) => {
+                  if (parameter.semantic === "thinking") {
+                    applySettingsChange({
+                      modelParameters: {
+                        ...(composerSettings.draftSettings.modelParameters ??
+                          composerSettings.sessionSettings?.modelParameters ??
+                          {}),
+                        [parameter.id]: checked ? "true" : "false"
+                      }
+                    });
+                    return;
+                  }
                   applySettingsChange({
                     speed: checked ? "fast" : "standard"
-                  })
-                }
+                  });
+                }}
               />
             </div>
           ) : (
@@ -520,6 +540,8 @@ function modelParameterLabel(
       return labels.reasoningLabel;
     case "speed":
       return labels.speedLabel;
+    case "thinking":
+      return "Think";
     default:
       return fallback;
   }

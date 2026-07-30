@@ -150,29 +150,34 @@ func TestProjectCursorWireModelParameterProfilesPrecedenceAndFamilies(t *testing
 		t.Fatalf("gpt context = %#v, want ACP options", contextParam)
 	}
 	reasoningParam := parameterByID(t, gpt, "reasoning")
-	if !slices.Equal(optionValues(reasoningParam.Options), []string{"none", "low", "medium", "high", "xhigh", "max"}) {
-		t.Fatalf("gpt reasoning options = %#v", reasoningParam.Options)
+	if !reasoningParam.Configurable || reasoningParam.CurrentValue != "medium" ||
+		!slices.Equal(optionValues(reasoningParam.Options), []string{"none", "low", "medium", "high", "xhigh", "max"}) {
+		t.Fatalf("gpt reasoning family preset = %#v", reasoningParam)
 	}
 	speedParam := parameterByID(t, gpt, "speed")
-	if !speedParam.Configurable || speedParam.CurrentValue != "standard" {
-		t.Fatalf("gpt speed = %#v", speedParam)
+	if speedParam.Configurable {
+		t.Fatalf("gpt must not expose Fast: %#v", speedParam)
 	}
 
 	claude := byModel["claude-sonnet-5[thinking=true,context=300k,effort=high]"]
-	if parameterByID(t, claude, "reasoning").CurrentValue != "high" {
+	if reasoning := parameterByID(t, claude, "reasoning"); reasoning.CurrentValue != "high" ||
+		!slices.Equal(optionValues(reasoning.Options), []string{"low", "medium", "high", "xhigh", "max"}) {
 		t.Fatalf("claude reasoning = %#v", claude.Parameters)
 	}
-	if got := parameterByID(t, claude, "context"); !slices.Equal(optionValues(got.Options), []string{"300k", "1m"}) {
-		t.Fatalf("claude context options = %#v", got.Options)
+	if got := parameterByID(t, claude, "context"); !got.Configurable ||
+		!slices.Equal(optionValues(got.Options), []string{"300k", "1m"}) || got.CurrentValue != "300k" {
+		t.Fatalf("claude context preset = %#v", got)
 	}
 	thinking := parameterByID(t, claude, "thinking")
-	if thinking.CurrentValue != "true" || thinking.Configurable {
-		t.Fatalf("thinking must stay unknown/current-only: %#v", thinking)
+	if thinking.CurrentValue != "true" || !thinking.Configurable ||
+		!slices.Equal(optionValues(thinking.Options), []string{"true", "false"}) {
+		t.Fatalf("thinking family preset = %#v", thinking)
 	}
 
 	grok := byModel["grok-4.5[effort=low]"]
-	if !slices.Equal(optionValues(parameterByID(t, grok, "reasoning").Options), []string{"low", "medium", "high"}) {
-		t.Fatalf("grok reasoning = %#v", grok.Parameters)
+	if got := parameterByID(t, grok, "reasoning"); !got.Configurable || got.CurrentValue != "low" ||
+		!slices.Equal(optionValues(got.Options), []string{"low", "medium", "high"}) {
+		t.Fatalf("grok reasoning family preset = %#v", got)
 	}
 
 	composer := byModel["composer-2.5[fast=true]"]
@@ -285,6 +290,68 @@ func TestApplyCursorWireComposerSettingsPatchDoesNotCarryParametersAcrossBaseMod
 	}
 }
 
+func TestApplyCursorWireComposerSettingsPatchDoesNotCarryFastAcrossModels(t *testing.T) {
+	t.Parallel()
+	model := "claude-opus-5[thinking=true,context=300k,effort=high,fast=false]"
+	patch := applyCursorWireComposerSettingsPatch(
+		ComposerSettings{Model: "composer-2.5[fast=true]", Speed: "fast"},
+		ComposerSettingsPatch{Model: &model},
+	)
+	if patch.Model == nil || *patch.Model != model {
+		t.Fatalf("model patch = %#v, want advertised model id %q", patch.Model, model)
+	}
+	if patch.Speed == nil || *patch.Speed != "" {
+		t.Fatalf("speed patch = %#v, want cleared unsupported Fast", patch.Speed)
+	}
+}
+
+func TestCursorWireFamilyConfigurationEnablesClaudeAndGPTControls(t *testing.T) {
+	t.Parallel()
+	claudeID := "claude-opus-5[thinking=true,context=300k,effort=high,fast=false]"
+	claude, ok := cursorWireFamilyCapabilityProfile(
+		claudeID,
+		parameterizedModelBaseID(claudeID),
+		parseParameterizedModelID(claudeID),
+	)
+	if !ok {
+		t.Fatal("Claude family preset missing")
+	}
+	if got := optionValues(parameterByID(t, claude, "context").Options); !slices.Equal(got, []string{"300k", "1m"}) {
+		t.Fatalf("Claude context options = %#v", got)
+	}
+	if got := optionValues(parameterByID(t, claude, "reasoning").Options); !slices.Equal(got, []string{"low", "medium", "high", "xhigh", "max"}) {
+		t.Fatalf("Claude reasoning options = %#v", got)
+	}
+	claudeThinkOff := applyCursorWireEffectiveValues(
+		claude,
+		claudeID,
+		map[string]string{ComposerModelParameterSemanticThinking: "false"},
+		"",
+	)
+	if thinking := parameterByID(t, claudeThinkOff, "thinking"); thinking.CurrentValue != "false" || !thinking.Configurable {
+		t.Fatalf("Claude thinking state = %#v", thinking)
+	}
+	if reasoning := parameterByID(t, claudeThinkOff, "reasoning"); reasoning.Configurable {
+		t.Fatalf("Claude reasoning must be disabled while Think is off: %#v", reasoning)
+	}
+
+	gptID := "gpt-5.6-sol[context=272k,reasoning=medium,fast=false]"
+	gpt, ok := cursorWireFamilyCapabilityProfile(
+		gptID,
+		parameterizedModelBaseID(gptID),
+		parseParameterizedModelID(gptID),
+	)
+	if !ok {
+		t.Fatal("GPT family preset missing")
+	}
+	if got := optionValues(parameterByID(t, gpt, "context").Options); !slices.Equal(got, []string{"272k", "1m"}) {
+		t.Fatalf("GPT context options = %#v", got)
+	}
+	if got := optionValues(parameterByID(t, gpt, "reasoning").Options); !slices.Equal(got, []string{"none", "low", "medium", "high", "xhigh", "max"}) {
+		t.Fatalf("GPT reasoning options = %#v", got)
+	}
+}
+
 func TestApplyCursorWireComposerSettingsClearsUnsupportedFast(t *testing.T) {
 	t.Parallel()
 	settings := applyCursorWireComposerSettings(ComposerSettings{
@@ -323,7 +390,7 @@ func TestCursorWireComposerOptionsProfileMatchesRewrittenEffectiveModel(t *testi
 			},
 		},
 	)
-	wantModel := "gpt-5.5[context=1m,reasoning=high,fast=true]"
+	wantModel := "gpt-5.5[context=1m,reasoning=high,fast=false]"
 	if options.EffectiveSettings.Model != wantModel {
 		t.Fatalf("effective model = %q, want %q", options.EffectiveSettings.Model, wantModel)
 	}
@@ -354,7 +421,9 @@ func TestGetComposerOptionsProjectsCursorWireProfiles(t *testing.T) {
 		t.Fatalf("composer profile = %#v", composer)
 	}
 	gpt := findProfile(t, options.ModelParameterProfiles, "gpt-5.2[reasoning=medium,fast=false]")
-	if !slices.Equal(optionValues(parameterByID(t, gpt, "reasoning").Options), []string{"none", "low", "medium", "high", "xhigh", "max"}) {
+	reasoning := parameterByID(t, gpt, "reasoning")
+	if reasoning.CurrentValue != "medium" || !reasoning.Configurable ||
+		!slices.Equal(optionValues(reasoning.Options), []string{"none", "low", "medium", "high", "xhigh", "max"}) {
 		t.Fatalf("gpt profile = %#v", gpt)
 	}
 }

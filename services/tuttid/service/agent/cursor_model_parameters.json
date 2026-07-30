@@ -1,0 +1,31 @@
+[
+  {
+    "id": "claude",
+    "prefixes": ["claude-", "anthropic/claude-"],
+    "reasoningWireKey": "effort",
+    "reasoningValues": ["low", "medium", "high", "xhigh", "max"],
+    "contextValues": ["300k", "1m"],
+    "thinkingValues": ["true", "false"],
+    "fastSupported": false
+  },
+  {
+    "id": "gpt",
+    "prefixes": ["gpt-", "openai/gpt-"],
+    "reasoningWireKey": "reasoning",
+    "reasoningValues": ["none", "low", "medium", "high", "xhigh", "max"],
+    "contextValues": ["272k", "1m"],
+    "fastSupported": false
+  },
+  {
+    "id": "composer",
+    "prefixes": ["composer-"],
+    "fastSupported": true
+  },
+  {
+    "id": "grok",
+    "prefixes": ["grok-", "x-ai/grok-", "xai/grok-"],
+    "reasoningWireKey": "effort",
+    "reasoningValues": ["low", "medium", "high"],
+    "fastSupported": true
+  }
+]

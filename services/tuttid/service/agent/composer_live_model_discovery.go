@@ -731,10 +731,23 @@ func liveComposerSelectedModel(selectedModel string, liveModels []ComposerConfig
 				return selectedModel
 			}
 		}
+		// A selected model is authoritative even when it is not one of the
+		// catalog's literal values. Cursor encodes Context / reasoning / Fast
+		// inside the model id, so a confirmed value such as
+		// "gpt-5[context=1m]" will intentionally differ from the catalog's
+		// base entry. Falling through here used to select the first catalog
+		// entry, which is normally Cursor's "default[]" (Auto), silently
+		// replacing the user's model choice.
+		return selectedModel
 	}
-	for _, option := range liveModels {
-		if strings.TrimSpace(option.Value) == "default" {
-			return "default"
+	// Only choose an automatic option when the caller did not select a model.
+	// Cursor represents Auto as "default[]", while other ACP providers use
+	// "default" or "auto".
+	for _, automatic := range []string{"default", "default[]", "auto"} {
+		for _, option := range liveModels {
+			if strings.TrimSpace(option.Value) == automatic {
+				return automatic
+			}
 		}
 	}
 	for _, option := range liveModels {

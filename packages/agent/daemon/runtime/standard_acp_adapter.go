@@ -78,11 +78,15 @@ type standardACPConfig struct {
 	// Cursor-style parameterized model providers that do not advertise
 	// Context/reasoning/speed as standalone config options.
 	encodeModelParametersInModelID bool
-	messageDiagnostics             *standardACPMessageDiagnostics
-	capabilities                   []string
-	agentTargetID                  string
-	installationID                 string
-	executableIdentity             *ExecutableIdentity
+	// requireInitialModelConfirmation prevents a provider from silently
+	// starting on its automatic/default model after rejecting an explicit
+	// model selection during session/new setup.
+	requireInitialModelConfirmation bool
+	messageDiagnostics              *standardACPMessageDiagnostics
+	capabilities                    []string
+	agentTargetID                   string
+	installationID                  string
+	executableIdentity              *ExecutableIdentity
 }
 
 type standardACPMessageDiagnostics struct {

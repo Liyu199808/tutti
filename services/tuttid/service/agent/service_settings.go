@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 
 	agenthost "github.com/tutti-os/tutti/packages/agent/host"
@@ -157,6 +158,16 @@ func (s *Service) UpdateSettings(ctx context.Context, workspaceID string, agentS
 	}
 	beforeModel := strings.TrimSpace(currentSettings.Model)
 	if composerUsesCursorWireParameterizedModels(provider) {
+		slog.Info("Cursor model settings update received",
+			"event", "agent.cursor_model_switch.service.received",
+			"workspace_id", workspaceID,
+			"agent_session_id", agentSessionID,
+			"current_model", currentSettings.Model,
+			"current_speed", currentSettings.Speed,
+			"requested_model", strings.TrimSpace(value(settings.Model)),
+			"requested_speed", strings.TrimSpace(value(settings.Speed)),
+			"requested_parameter_count", len(settings.ModelParameters),
+		)
 		settings, err = s.applyRememberedCursorWireModelParameters(
 			ctx,
 			observed.Canonical.AgentTargetID,
@@ -174,12 +185,29 @@ func (s *Service) UpdateSettings(ctx context.Context, workspaceID string, agentS
 		); err != nil {
 			return Session{}, err
 		}
+		slog.Info("Cursor model settings update dispatching to host",
+			"event", "agent.cursor_model_switch.service.dispatch",
+			"workspace_id", workspaceID,
+			"agent_session_id", agentSessionID,
+			"model", strings.TrimSpace(value(settings.Model)),
+			"speed", strings.TrimSpace(value(settings.Speed)),
+			"parameter_count", len(settings.ModelParameters),
+		)
 	}
 	requestedSettings := settings
 	result, err := s.ApplicationHost().UpdateSettings(ctx, agenthost.UpdateSettingsInput{
 		WorkspaceID: workspaceID, AgentSessionID: agentSessionID, Settings: settings,
 	})
 	if err != nil {
+		if composerUsesCursorWireParameterizedModels(provider) {
+			slog.Warn("Cursor model settings update failed",
+				"event", "agent.cursor_model_switch.service.failed",
+				"workspace_id", workspaceID,
+				"agent_session_id", agentSessionID,
+				"model", strings.TrimSpace(value(requestedSettings.Model)),
+				"error", err.Error(),
+			)
+		}
 		if composerUsesCursorWireParameterizedModels(provider) {
 			var providerErr *agenthost.ProviderError
 			if errors.As(err, &providerErr) {
@@ -200,6 +228,14 @@ func (s *Service) UpdateSettings(ctx context.Context, workspaceID string, agentS
 		if result.Live && result.Session.Settings != nil {
 			confirmedSettings = *result.Session.Settings
 		}
+		slog.Info("Cursor model settings update confirmed",
+			"event", "agent.cursor_model_switch.service.confirmed",
+			"workspace_id", workspaceID,
+			"agent_session_id", agentSessionID,
+			"requested_model", strings.TrimSpace(value(requestedSettings.Model)),
+			"confirmed_model", confirmedSettings.Model,
+			"confirmed_speed", confirmedSettings.Speed,
+		)
 		agentTargetID := strings.TrimSpace(result.Canonical.AgentTargetID)
 		if requestedSettings.ModelParameters != nil && s.PersistAgentModelParameters != nil {
 			confirmedPatch := preferencesbiz.AgentModelParametersPatch{}

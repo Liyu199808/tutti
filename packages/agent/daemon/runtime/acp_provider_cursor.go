@@ -127,6 +127,11 @@ func newCursorAdapterFromProviderDescriptor(
 	adapter.config.automaticPermissionDecision = cursorAutoApprovePermissionDecision
 	adapter.config.autoContinueRetriableTurnError = true
 	adapter.config.encodeModelParametersInModelID = true
+	// Cursor's Auto value is `default[]`. A rejected explicit model (including
+	// a parameterized Context/reasoning value) must not silently create an Auto
+	// session: the caller needs an ACP rejection so it can keep the selected
+	// model visible and report the failure.
+	adapter.config.requireInitialModelConfirmation = true
 	adapter.config.messageDiagnostics = &standardACPMessageDiagnostics{
 		method:         cursorACPMethodTask,
 		observeMessage: logCursorACPTaskExtension,

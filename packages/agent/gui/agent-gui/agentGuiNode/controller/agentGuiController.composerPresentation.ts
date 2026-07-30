@@ -199,6 +199,19 @@ export type ComposerNativeModelVerdict =
   | "rejected"
   | "unverifiable";
 
+// Some agents encode supported settings in a model id, e.g.
+// `model[context=300k,fast=false]`. The parameter suffix is not model
+// identity: a refreshed catalog can legitimately report the same base model
+// with a different current suffix. Keep this parser provider-neutral so the
+// shared GUI never needs to branch on a provider name.
+function composerModelBaseId(model: string): string {
+  const normalized = model.trim();
+  const parameterStart = normalized.indexOf("[");
+  return (
+    parameterStart >= 0 ? normalized.slice(0, parameterStart) : normalized
+  ).trim();
+}
+
 /**
  * Verdict of a bare model id against the provider-native options list. Only
  * settled catalog entries are testimony:
@@ -235,9 +248,23 @@ export function verifyComposerModelAgainstNativeOptions(
   if (isSelectedModelEcho) {
     return "unverifiable";
   }
-  return catalogEntries.some((option) => option.value === model)
-    ? "verified"
-    : "rejected";
+  if (catalogEntries.some((option) => option.value === model)) {
+    return "verified";
+  }
+  // A catalog entry with the same parameterized-model base is evidence that
+  // the model exists, but cannot prove that this precise parameter suffix is
+  // valid. Crucially, it is not grounds to erase the user's selection and
+  // show Auto while the runtime/ACP confirmation is still pending.
+  const baseModel = composerModelBaseId(model);
+  if (
+    baseModel &&
+    catalogEntries.some(
+      (option) => composerModelBaseId(option.value) === baseModel
+    )
+  ) {
+    return "unverifiable";
+  }
+  return "rejected";
 }
 
 /**

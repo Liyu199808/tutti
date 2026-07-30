@@ -41,9 +41,6 @@ func projectCursorWireModelParameterProfiles(
 		baseModelID := parameterizedModelBaseID(modelID)
 		parsed := parseParameterizedModelID(modelID)
 		parameterized = append(parameterized, cursorWireParameterizedCurrentProfile(modelID, baseModelID, parsed))
-		if profile, ok := cursorWireExactCapabilityProfile(modelID, baseModelID, parsed); ok {
-			exact = append(exact, profile)
-		}
 		if profile, ok := cursorWireFamilyCapabilityProfile(modelID, baseModelID, parsed); ok {
 			family = append(family, profile)
 		}
@@ -114,6 +111,14 @@ func cursorWireParameterizedCurrentProfile(
 				Availability:    ComposerModelParameterAvailabilityUnknown,
 				CurrentValue:    cursorWireSpeedFromFastParam(param.Value),
 			})
+		case "thinking":
+			parameters = append(parameters, ComposerModelParameterCapability{
+				ID: ComposerModelParameterSemanticThinking, Semantic: ComposerModelParameterSemanticThinking,
+				Source:          ComposerModelParameterSourceParameterizedModel,
+				PreferenceScope: ComposerModelParameterPreferenceScopeBaseModel,
+				Availability:    ComposerModelParameterAvailabilityUnknown,
+				CurrentValue:    param.Value,
+			})
 		default:
 			parameters = append(parameters, ComposerModelParameterCapability{
 				ID: key, Semantic: key,
@@ -162,59 +167,15 @@ func cursorWireFamilyCapabilityProfile(
 			Options: optionValuesFromStrings(family.reasoningValues),
 		})
 	}
-	if len(parameters) == 0 {
-		return ComposerModelParameterProfile{}, false
-	}
-	return ComposerModelParameterProfile{ModelID: modelID, BaseModelID: baseModelID, Parameters: parameters}, true
-}
-
-func cursorWireExactCapabilityProfile(
-	modelID string,
-	baseModelID string,
-	parsed parameterizedModelID,
-) (ComposerModelParameterProfile, bool) {
-	if isAutoParameterizedModelID(modelID) {
-		return ComposerModelParameterProfile{}, false
-	}
-	preset, ok := cursorWireExactPresetForBase(baseModelID)
-	if !ok {
-		return ComposerModelParameterProfile{}, false
-	}
-	parameters := make([]ComposerModelParameterCapability, 0, 3)
-	if len(preset.contextValues) > 0 {
-		current, _ := parsed.Lookup("context")
+	if len(family.thinkingValues) > 0 {
+		current, _ := parsed.Lookup("thinking")
 		parameters = append(parameters, ComposerModelParameterCapability{
-			ID: ComposerModelParameterSemanticContext, Semantic: ComposerModelParameterSemanticContext,
-			Source:          ComposerModelParameterSourceExactModelPreset,
+			ID: ComposerModelParameterSemanticThinking, Semantic: ComposerModelParameterSemanticThinking,
+			Source:          ComposerModelParameterSourceModelFamilyPreset,
 			PreferenceScope: ComposerModelParameterPreferenceScopeBaseModel,
 			Availability:    ComposerModelParameterAvailabilitySupported,
 			Configurable:    true, CurrentValue: current,
-			Options: optionValuesFromStrings(preset.contextValues),
-		})
-	}
-	if preset.reasoningWireKey != "" && len(preset.reasoningValues) > 0 {
-		current, _ := parsed.Lookup(preset.reasoningWireKey)
-		parameters = append(parameters, ComposerModelParameterCapability{
-			ID: ComposerModelParameterSemanticReasoning, Semantic: ComposerModelParameterSemanticReasoning,
-			Source:          ComposerModelParameterSourceExactModelPreset,
-			PreferenceScope: ComposerModelParameterPreferenceScopeBaseModel,
-			Availability:    ComposerModelParameterAvailabilitySupported,
-			Configurable:    true, CurrentValue: current,
-			Options: optionValuesFromStrings(preset.reasoningValues),
-		})
-	}
-	if preset.fastSupported {
-		current := ""
-		if fast, ok := parsed.Lookup("fast"); ok {
-			current = cursorWireSpeedFromFastParam(fast)
-		}
-		parameters = append(parameters, ComposerModelParameterCapability{
-			ID: ComposerModelParameterSemanticSpeed, Semantic: ComposerModelParameterSemanticSpeed,
-			Source:          ComposerModelParameterSourceExactModelPreset,
-			PreferenceScope: ComposerModelParameterPreferenceScopeAgentTarget,
-			Availability:    ComposerModelParameterAvailabilitySupported,
-			Configurable:    true, CurrentValue: current,
-			Options: optionValuesFromStrings([]string{"standard", "fast"}),
+			Options: optionValuesFromStrings(family.thinkingValues),
 		})
 	}
 	if len(parameters) == 0 {
@@ -264,6 +225,10 @@ func applyCursorWireEffectiveValues(
 					parameters[index].Source = ComposerModelParameterSourceParameterizedModel
 				}
 			}
+		case ComposerModelParameterSemanticThinking:
+			if value := strings.TrimSpace(effectiveParameters[ComposerModelParameterSemanticThinking]); value != "" {
+				parameters[index].CurrentValue = value
+			}
 		}
 	}
 	if fastSupported && !hasSpeed && !isAutoParameterizedModelID(profile.ModelID) {
@@ -284,6 +249,21 @@ func applyCursorWireEffectiveValues(
 			Configurable:    true, CurrentValue: current,
 			Options: optionValuesFromStrings([]string{"standard", "fast"}),
 		})
+	}
+	thinkingEnabled := true
+	for _, parameter := range parameters {
+		if parameter.Semantic == ComposerModelParameterSemanticThinking &&
+			strings.EqualFold(strings.TrimSpace(parameter.CurrentValue), "false") {
+			thinkingEnabled = false
+			break
+		}
+	}
+	if !thinkingEnabled {
+		for index := range parameters {
+			if parameters[index].Semantic == ComposerModelParameterSemanticReasoning {
+				parameters[index].Configurable = false
+			}
+		}
 	}
 	profile.Parameters = parameters
 	return profile

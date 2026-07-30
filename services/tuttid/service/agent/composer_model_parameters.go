@@ -6,6 +6,7 @@ const (
 	ComposerModelParameterSemanticContext   = "context"
 	ComposerModelParameterSemanticReasoning = "reasoning"
 	ComposerModelParameterSemanticSpeed     = "speed"
+	ComposerModelParameterSemanticThinking  = "thinking"
 
 	ComposerModelParameterSourceACP                = "acp"
 	ComposerModelParameterSourceExactModelPreset   = "exact-model-preset"

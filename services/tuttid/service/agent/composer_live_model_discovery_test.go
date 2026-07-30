@@ -78,6 +78,24 @@ func cursorModelRuntimeContext() map[string]any {
 	}
 }
 
+func TestLiveComposerSelectedModelPreservesParameterizedCursorSelection(t *testing.T) {
+	t.Parallel()
+	liveModels := []ComposerConfigOptionValue{
+		{Value: "default[]", Label: "Auto"},
+		{Value: "gpt-5.2[reasoning=medium,fast=false]", Label: "gpt-5.2"},
+	}
+
+	if got := liveComposerSelectedModel(
+		"gpt-5.2[context=1m,reasoning=medium,fast=false]",
+		liveModels,
+	); got != "gpt-5.2[context=1m,reasoning=medium,fast=false]" {
+		t.Fatalf("selected parameterized Cursor model = %q, want preserved model", got)
+	}
+	if got := liveComposerSelectedModel("", liveModels); got != "default[]" {
+		t.Fatalf("empty selection = %q, want Cursor Auto default[]", got)
+	}
+}
+
 func TestLiveModelOptionsFromRunningSessionFiltersProvider(t *testing.T) {
 	t.Parallel()
 	runtime := newFakeRuntime()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -73,6 +74,16 @@ func (s *Service) CreateWithResult(ctx context.Context, workspaceID string, inpu
 	permissionModeExplicit := strings.TrimSpace(value(input.PermissionModeID)) != ""
 	if err := s.applyCreateSessionComposerDefaults(ctx, &input); err != nil {
 		return CreateSessionResult{}, err
+	}
+	if composerUsesCursorWireParameterizedModels(provider) {
+		slog.Info("Cursor session creation settings resolved",
+			"event", "agent.cursor_model_switch.create.defaults_resolved",
+			"workspace_id", workspaceID,
+			"agent_target_id", input.AgentTargetID,
+			"requested_model", strings.TrimSpace(value(input.Model)),
+			"requested_speed", strings.TrimSpace(value(input.Speed)),
+			"model_parameter_count", len(input.ModelParameters),
+		)
 	}
 	input.ConversationDetailMode = preferencesbiz.NormalizeDesktopAgentConversationDetailMode(input.ConversationDetailMode)
 	requestedPermissionModeID := strings.TrimSpace(value(input.PermissionModeID))
@@ -203,7 +214,19 @@ func (s *Service) CreateWithResult(ctx context.Context, workspaceID string, inpu
 		Speed:            normalizeSpeedForLaunch(provider, input.ProviderTargetRef, value(input.Speed)),
 	}
 	if composerUsesCursorWireParameterizedModels(provider) {
+		beforeModel := runtimeSettings.Model
+		beforeSpeed := runtimeSettings.Speed
 		runtimeSettings = applyCursorWireComposerSettings(runtimeSettings)
+		slog.Info("Cursor session creation settings normalized",
+			"event", "agent.cursor_model_switch.create.normalized",
+			"workspace_id", workspaceID,
+			"agent_session_id", input.AgentSessionID,
+			"input_model", beforeModel,
+			"normalized_model", runtimeSettings.Model,
+			"input_speed", beforeSpeed,
+			"normalized_speed", runtimeSettings.Speed,
+			"model_parameter_count", len(runtimeSettings.ModelParameters),
+		)
 	}
 	hostInput := agenthost.CreateSessionInput{
 		AgentSessionID: input.AgentSessionID, AgentTargetID: input.AgentTargetID, Provider: input.Provider,

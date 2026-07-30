@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -143,7 +144,20 @@ func (p serviceHostSettingsPolicy) NormalizeRuntimeSettingsPatch(
 		settings.Speed = &normalized
 	}
 	if composerUsesCursorWireParameterizedModels(provider) {
+		requestedModel := strings.TrimSpace(value(settings.Model))
+		requestedSpeed := strings.TrimSpace(value(settings.Speed))
 		settings = applyCursorWireComposerSettingsPatch(current, settings)
+		slog.Info("Cursor model settings patch normalized",
+			"event", "agent.cursor_model_switch.host.normalized",
+			"agent_session_id", session.ID,
+			"current_model", current.Model,
+			"requested_model", requestedModel,
+			"normalized_model", strings.TrimSpace(value(settings.Model)),
+			"current_speed", current.Speed,
+			"requested_speed", requestedSpeed,
+			"normalized_speed", strings.TrimSpace(value(settings.Speed)),
+			"normalized_parameter_count", len(settings.ModelParameters),
+		)
 	}
 	return settings
 }

@@ -1,66 +1,98 @@
 package agent
 
 import (
+	_ "embed"
+	"encoding/json"
 	"strings"
 
 	"github.com/tutti-os/tutti/packages/agent/daemon/providerregistry"
 )
 
-// cursorWireFamily describes one audited Cursor parameterized-model family
-// preset. Exact model presets override these when present.
+// cursorWireFamily describes one configured Cursor parameterized-model family.
 type cursorWireFamily struct {
-	match            func(baseModelID string) bool
+	id               string
+	prefixes         []string
 	reasoningWireKey string
 	reasoningValues  []string
 	contextValues    []string
-	// fastSupportedByFamily is never inferred. Fast is only projected as
-	// supported when the exact model id, exact preset, or ACP metadata says so.
-}
-
-var cursorWireExactPresets = map[string]cursorWireExactPreset{}
-
-type cursorWireExactPreset struct {
-	reasoningWireKey string
-	reasoningValues  []string
-	contextValues    []string
+	thinkingValues   []string
 	fastSupported    bool
 }
 
-var cursorWireFamilies = []cursorWireFamily{
-	{
-		match: func(base string) bool {
-			lower := strings.ToLower(base)
-			return strings.HasPrefix(lower, "gpt-") || strings.HasPrefix(lower, "openai/gpt-")
-		},
-		reasoningWireKey: "reasoning",
-		reasoningValues:  []string{"none", "low", "medium", "high", "xhigh", "max"},
-		contextValues:    []string{"272k", "1m"},
-	},
-	{
-		match: func(base string) bool {
-			lower := strings.ToLower(base)
-			return strings.HasPrefix(lower, "claude-") || strings.HasPrefix(lower, "anthropic/claude-")
-		},
-		reasoningWireKey: "effort",
-		reasoningValues:  []string{"low", "medium", "high", "xhigh", "max"},
-		contextValues:    []string{"300k", "1m"},
-	},
-	{
-		match: func(base string) bool {
-			lower := strings.ToLower(base)
-			return strings.HasPrefix(lower, "grok-") ||
-				strings.HasPrefix(lower, "x-ai/grok-") ||
-				strings.HasPrefix(lower, "xai/grok-")
-		},
-		reasoningWireKey: "effort",
-		reasoningValues:  []string{"low", "medium", "high"},
-	},
-	{
-		match: func(base string) bool {
-			return strings.HasPrefix(strings.ToLower(base), "composer-")
-		},
-		// Composer only configures Fast; Fast support is still evidence-gated.
-	},
+// cursorWireFamilies is configuration-backed. Cursor ACP commonly reports a
+// current wire id but not a selectable parameter range, so these rules provide
+// the reviewed family-level fallback. ACP structured capabilities still win.
+var cursorWireFamilies = loadCursorWireFamilies()
+
+//go:embed cursor_model_parameters.json
+var cursorWireExactPresetsJSON []byte
+
+type cursorWireFamilyJSON struct {
+	ID               string   `json:"id"`
+	Prefixes         []string `json:"prefixes"`
+	ReasoningWireKey string   `json:"reasoningWireKey"`
+	ReasoningValues  []string `json:"reasoningValues"`
+	ContextValues    []string `json:"contextValues"`
+	ThinkingValues   []string `json:"thinkingValues"`
+	FastSupported    bool     `json:"fastSupported"`
+}
+
+func loadCursorWireFamilies() []cursorWireFamily {
+	var entries []cursorWireFamilyJSON
+	if err := json.Unmarshal(cursorWireExactPresetsJSON, &entries); err != nil {
+		panic("invalid Cursor model parameter family configuration: " + err.Error())
+	}
+	families := make([]cursorWireFamily, 0, len(entries))
+	seenIDs := map[string]struct{}{}
+	seenPrefixes := map[string]struct{}{}
+	for _, entry := range entries {
+		id := strings.TrimSpace(entry.ID)
+		if id == "" {
+			panic("invalid Cursor model parameter family configuration: empty id")
+		}
+		if _, duplicate := seenIDs[id]; duplicate {
+			panic("invalid Cursor model parameter family configuration: duplicate id " + id)
+		}
+		seenIDs[id] = struct{}{}
+		prefixes := normalizedCursorPresetValues(entry.Prefixes)
+		if len(prefixes) == 0 {
+			panic("invalid Cursor model parameter family configuration: no prefixes for " + id)
+		}
+		for _, prefix := range prefixes {
+			prefix = strings.ToLower(prefix)
+			if _, duplicate := seenPrefixes[prefix]; duplicate {
+				panic("invalid Cursor model parameter family configuration: duplicate prefix " + prefix)
+			}
+			seenPrefixes[prefix] = struct{}{}
+		}
+		families = append(families, cursorWireFamily{
+			id:               id,
+			prefixes:         prefixes,
+			reasoningWireKey: strings.TrimSpace(entry.ReasoningWireKey),
+			reasoningValues:  normalizedCursorPresetValues(entry.ReasoningValues),
+			contextValues:    normalizedCursorPresetValues(entry.ContextValues),
+			thinkingValues:   normalizedCursorPresetValues(entry.ThinkingValues),
+			fastSupported:    entry.FastSupported,
+		})
+	}
+	return families
+}
+
+func normalizedCursorPresetValues(values []string) []string {
+	result := make([]string, 0, len(values))
+	seen := map[string]struct{}{}
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, duplicate := seen[value]; duplicate {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
 }
 
 func composerUsesCursorWireParameterizedModels(provider string) bool {
@@ -73,23 +105,18 @@ func cursorWireFamilyForBase(baseModelID string) (cursorWireFamily, bool) {
 	if baseModelID == "" {
 		return cursorWireFamily{}, false
 	}
+	lower := strings.ToLower(baseModelID)
 	for _, family := range cursorWireFamilies {
-		if family.match(baseModelID) {
-			return family, true
+		for _, prefix := range family.prefixes {
+			if strings.HasPrefix(lower, strings.ToLower(prefix)) {
+				return family, true
+			}
 		}
 	}
 	return cursorWireFamily{}, false
 }
 
-func cursorWireExactPresetForBase(baseModelID string) (cursorWireExactPreset, bool) {
-	preset, ok := cursorWireExactPresets[strings.TrimSpace(baseModelID)]
-	return preset, ok
-}
-
 func cursorWireReasoningKey(baseModelID string, parsed parameterizedModelID) string {
-	if preset, ok := cursorWireExactPresetForBase(baseModelID); ok && preset.reasoningWireKey != "" {
-		return preset.reasoningWireKey
-	}
 	if family, ok := cursorWireFamilyForBase(baseModelID); ok && family.reasoningWireKey != "" {
 		return family.reasoningWireKey
 	}
@@ -106,11 +133,7 @@ func cursorWireFastSupported(modelID string, baseModelID string, acpFastDeclared
 	if acpFastDeclared {
 		return true
 	}
-	if preset, ok := cursorWireExactPresetForBase(baseModelID); ok && preset.fastSupported {
-		return true
-	}
-	parsed := parseParameterizedModelID(modelID)
-	if _, ok := parsed.Lookup("fast"); ok {
+	if family, ok := cursorWireFamilyForBase(baseModelID); ok && family.fastSupported {
 		return true
 	}
 	return false

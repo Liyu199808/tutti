@@ -407,8 +407,19 @@ func applyCursorWireComposerSettingsPatch(
 	if patch.Model != nil {
 		next.Model = strings.TrimSpace(*patch.Model)
 	}
-	if parameterizedModelBaseID(next.Model) != parameterizedModelBaseID(current.Model) {
+	modelChanged := patch.Model != nil &&
+		parameterizedModelBaseID(next.Model) != parameterizedModelBaseID(current.Model)
+	if modelChanged {
 		next.ModelParameters = extractCursorWireModelParameters(next.Model)
+		// The selected value from ACP is the complete, valid Cursor wire id.
+		// Do not carry Fast from the prior model into it: a target-global
+		// preference of `fast` is not proof that this particular model accepts
+		// `fast=true`. Doing so turned e.g. an advertised Opus/Sol
+		// `[fast=false]` selection into an unadvertised `[fast=true]` request,
+		// which Cursor rejected and the UI then displayed as Auto.
+		if patch.Speed == nil {
+			next.Speed = extractCursorWireSpeed(next.Model)
+		}
 	} else {
 		next.ModelParameters = cloneStringValues(current.ModelParameters)
 	}
